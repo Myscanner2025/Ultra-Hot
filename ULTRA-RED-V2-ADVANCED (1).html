@@ -1,0 +1,3380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ULTRA RED V2 - Advanced Liquidity Hunter</title>
+<style>
+:root{
+--bg1:#0a0808;--bg2:#120c0c;--bg3:#1a1212;--bg4:#221818;
+--border:#3a2020;--text:#ffffff;--text2:#ffffff;--text3:#e0e0e0;
+--long:#00d9a0;--long-dim:rgba(0,217,160,0.15);
+--short:#ff2d2d;--short-dim:rgba(255,45,45,0.15);
+--purple:#ff4d6d;--purple-dim:rgba(255,77,109,0.15);
+--blue:#ff6b6b;--blue-dim:rgba(255,107,107,0.15);
+--amber:#ff8c42;--amber-dim:rgba(255,140,66,0.15);
+--cyan:#ff3c3c;--cyan-dim:rgba(255,60,60,0.15);
+--gold:#ffd700;--gold-dim:rgba(255,215,0,0.15);
+--tesla-red:#e31937;--tesla-dark:#8b0000;--tesla-glow:rgba(227,25,55,0.4)
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg1);color:var(--text);min-height:100vh;overflow-x:hidden}
+.app{max-width:100%;min-height:100vh;position:relative}
+
+/* TESLA JUNIPER ULTRA RED LIGHT RIBBON - Hidden source glow from top */
+.app::before{content:'';position:fixed;top:-2px;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent 0%,#8b0000 15%,#e31937 30%,#ff3c3c 50%,#e31937 70%,#8b0000 85%,transparent 100%);z-index:9999;box-shadow:0 0 15px 5px rgba(227,25,55,0.5),0 0 30px 10px rgba(227,25,55,0.3),0 3px 20px 5px rgba(227,25,55,0.2)}
+.app::after{content:'';position:fixed;top:0;left:0;right:0;height:50px;background:linear-gradient(180deg,rgba(227,25,55,0.1) 0%,rgba(227,25,55,0.03) 40%,transparent 100%);pointer-events:none;z-index:9998}
+
+/* SCAN BUTTON */
+.controls{padding:12px;background:linear-gradient(180deg,#120808,#0a0606);border-bottom:1px solid var(--border)}
+.scan-btn{width:100%;padding:14px;background:linear-gradient(135deg,#e31937,#ff2d2d,#cc0020);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 25px rgba(227,25,55,0.5),0 0 40px rgba(227,25,55,0.2),inset 0 1px 0 rgba(255,255,255,0.2);text-shadow:0 1px 2px rgba(0,0,0,0.3)}
+.scan-btn:active{transform:scale(0.98)}
+.scan-btn:disabled{opacity:0.5}
+.scan-btn.scanning{background:linear-gradient(90deg,#e31937,#ff6b6b,#ffd700,#ff6b6b,#e31937);background-size:300% 100%;animation:rainbow 2s linear infinite}
+@keyframes rainbow{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+.status-bar{text-align:center;padding:8px;font-size:11px;color:var(--text3);background:var(--bg1)}
+.status-bar.active{color:#ff6b6b;font-weight:600}
+
+/* MAIN TABS */
+.main-tabs{display:flex;background:linear-gradient(180deg,#0a0606,#120808);border-bottom:1px solid var(--border);padding:4px}
+.main-tab{flex:1;padding:12px 8px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;margin:2px;transition:all 0.2s;color:var(--text)}
+.main-tab.active{background:var(--bg3)}
+.main-tab.limit.active{color:#ff3c3c;box-shadow:0 0 15px rgba(255,60,60,0.3);border:1px solid #ff3c3c}
+.main-tab.confirmed.active{color:var(--gold);box-shadow:0 0 15px rgba(255,215,0,0.2);border:1px solid var(--gold)}
+.main-tab.caution.active{color:#ff8c42;box-shadow:0 0 15px rgba(255,140,66,0.2);border:1px solid #ff8c42}
+.main-tab.watch.active{color:#ff8c42;box-shadow:0 0 15px rgba(255,140,66,0.2);border:1px solid #ff8c42}
+.main-tab .cnt{display:inline-block;min-width:18px;padding:2px 6px;background:var(--bg4);border-radius:10px;font-size:11px;margin-left:4px}
+
+/* SUB TABS (LONG/SHORT) */
+.sub-tabs{display:flex;padding:6px 10px;gap:6px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.sub-tab{flex:1;padding:10px;text-align:center;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:var(--bg3);border:1px solid var(--border);transition:all 0.2s;color:var(--text)}
+.sub-tab.long.active{background:var(--long-dim);color:var(--long);border-color:var(--long);box-shadow:0 0 12px rgba(0,217,160,0.3)}
+.sub-tab.short.active{background:var(--short-dim);color:var(--short);border-color:var(--short);box-shadow:0 0 12px rgba(255,71,87,0.3)}
+.sub-tab .cnt{font-size:11px;opacity:0.8;margin-left:4px}
+
+/* PANELS */
+.panel{display:none;padding:10px;min-height:50vh}
+.panel.active{display:block}
+.signal-list{display:flex;flex-direction:column;gap:10px}
+
+/* SIGNAL CARDS */
+.signal-card{background:linear-gradient(135deg,#1a0c0c,#120606);border:1px solid #3a1818;border-radius:12px;padding:12px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(0,0,0,0.4)}
+.signal-card:active{transform:scale(0.98)}
+
+/* LIMIT CARD STYLING - Direction Based */
+.signal-card.limit.long{border-left:4px solid #00d9a0;box-shadow:0 0 20px rgba(0,217,160,0.15),inset 0 0 30px rgba(0,217,160,0.03)}
+.signal-card.limit.short{border-left:4px solid #ff2d2d;box-shadow:0 0 20px rgba(255,45,45,0.15),inset 0 0 30px rgba(255,45,45,0.03)}
+
+/* CONFIRMED CARD STYLING - Direction Based */
+.signal-card.confirmed.long{border-left:4px solid #00d9a0;box-shadow:0 0 25px rgba(0,217,160,0.25),0 0 40px rgba(255,215,0,0.1)}
+.signal-card.confirmed.short{border-left:4px solid #ff2d2d;box-shadow:0 0 25px rgba(255,45,45,0.25),0 0 40px rgba(255,215,0,0.1)}
+
+/* CAUTION CARD STYLING - Direction Based */
+.signal-card.caution.long{border-left:4px solid #00d9a0;box-shadow:0 0 20px rgba(0,217,160,0.15),inset 0 0 20px rgba(255,140,66,0.05)}
+.signal-card.caution.short{border-left:4px solid #ff2d2d;box-shadow:0 0 20px rgba(255,45,45,0.15),inset 0 0 20px rgba(255,140,66,0.05)}
+
+/* WATCH CARD STYLING - Direction Based */
+.signal-card.watch{opacity:0.85}
+.signal-card.watch.long{border-left:4px solid rgba(0,217,160,0.6);box-shadow:0 0 10px rgba(0,217,160,0.1)}
+.signal-card.watch.short{border-left:4px solid rgba(255,45,45,0.6);box-shadow:0 0 10px rgba(255,45,45,0.1)}
+
+/* CAUTION WARNING */
+.caution-warning{background:var(--amber-dim);border:1px solid var(--amber);border-radius:8px;padding:10px;margin-bottom:8px;text-align:center}
+.caution-warning .icon{font-size:18px;margin-bottom:4px}
+.caution-warning .text{font-size:11px;color:var(--amber);font-weight:600}
+.caution-warning .sub{font-size:9px;color:var(--text3);margin-top:4px}
+
+.status-badge.caution{background:var(--amber);color:#000}
+
+/* GRADE SPECIFIC GLOW */
+.signal-card.grade-perfect{animation:perfectPulse 2s ease-in-out infinite}
+.signal-card.grade-strong{border-color:var(--long)}
+.signal-card.grade-valid{border-color:var(--blue)}
+.signal-card.grade-heating{border-color:var(--amber)}
+.signal-card.grade-weak{border-color:var(--text3)}
+@keyframes perfectPulse{0%,100%{box-shadow:0 0 20px rgba(255,215,0,0.3)}50%{box-shadow:0 0 35px rgba(255,215,0,0.5)}}
+
+/* CARD TOP ROW */
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card-pair{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.coin-name{font-size:16px;font-weight:700}
+.dir-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px}
+.dir-badge.long{background:var(--long);color:#000}
+.dir-badge.short{background:#ff2d2d;color:#fff}
+.status-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px}
+.status-badge.limit{background:rgba(255,60,60,0.2);color:#ff3c3c;border:1px solid #ff3c3c}
+.status-badge.confirmed{background:var(--gold);color:#000}
+.status-badge.at-level{background:#ff3c3c;color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* GRADE BADGE */
+.grade-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px}
+.grade-badge.perfect{background:linear-gradient(135deg,var(--gold),#ffaa00);color:#000;box-shadow:0 0 15px rgba(255,215,0,0.5)}
+.grade-badge.strong{background:var(--long);color:#000;box-shadow:0 0 10px rgba(0,217,160,0.4)}
+.grade-badge.valid{background:#ff6b6b;color:#fff}
+.grade-badge.heating{background:#ff8c42;color:#000}
+.grade-badge.weak{background:var(--bg4);color:var(--text3)}
+
+/* POOL INFO */
+.pool-info{background:linear-gradient(135deg,#1a1010,#221515);border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #3a2020}
+.pool-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pool-row:last-child{margin-bottom:0}
+.pool-label{font-size:10px;color:var(--text3);text-transform:uppercase}
+.pool-value{font-size:13px;font-weight:600}
+.pool-value.price{color:var(--text)}
+.pool-value.distance{color:#ff8c42}
+.pool-value.touches{color:#ff4d6d}
+
+/* LEVELS BOX */
+.levels-box{background:linear-gradient(135deg,#1a1010,#221515);border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #3a2020}
+.levels-title{font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px}
+.level-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #3a2020}
+.level-row:last-child{border-bottom:none}
+.level-label{font-size:11px;color:var(--text2)}
+.level-value{font-size:13px;font-weight:700}
+.level-value.entry-long{color:#00d9a0}
+.level-value.entry-short{color:#ff2d2d}
+.level-value.sl{color:#ff2d2d}
+.level-value.tp{color:var(--long)}
+.level-rr{font-size:10px;font-weight:700;margin-left:8px}
+.level-rr.poor{color:#ff2d2d}
+.level-rr.good{color:#ffd700}
+.level-rr.great{color:#00d9a0}
+
+/* TARGETS BOX - Direction Based */
+.targets-box{background:linear-gradient(135deg,#1a1010,rgba(255,255,255,0.02));border-radius:8px;padding:10px;margin-bottom:8px}
+.targets-box.long{border:1px solid rgba(0,217,160,0.3);background:linear-gradient(135deg,#1a1010,rgba(0,217,160,0.05))}
+.targets-box.short{border:1px solid rgba(255,45,45,0.3);background:linear-gradient(135deg,#1a1010,rgba(255,45,45,0.05))}
+.targets-title{font-size:9px;text-transform:uppercase;margin-bottom:8px;letter-spacing:1px;display:flex;align-items:center;gap:4px}
+.targets-title.long{color:#00d9a0}
+.targets-title.short{color:#ff2d2d}
+.target-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
+.target-label{font-size:10px;color:var(--text)}
+.target-tf{font-size:9px;padding:2px 6px;border-radius:4px;margin-left:6px}
+.target-tf.long{color:#00d9a0;background:rgba(0,217,160,0.15)}
+.target-tf.short{color:#ff2d2d;background:rgba(255,45,45,0.15)}
+.target-price{font-size:12px;font-weight:600}
+.target-price.long{color:#00d9a0}
+.target-price.short{color:#ff2d2d}
+.target-rr{font-size:11px;font-weight:700}
+.target-rr.poor{color:#ff2d2d}
+.target-rr.good{color:#ffd700}
+.target-rr.great{color:#00d9a0}
+
+/* CONFLUENCE TAGS - Direction Based */
+.confluence-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.conf-tag{font-size:9px;padding:4px 8px;border-radius:4px;background:#1a1010;display:flex;align-items:center;gap:4px}
+.conf-tag.zone-long{border:1px solid #00d9a0;color:#00d9a0}
+.conf-tag.zone-short{border:1px solid #ff2d2d;color:#ff2d2d}
+.conf-tag.stacked-long{border:1px solid #00d9a0;color:#00d9a0}
+.conf-tag.stacked-short{border:1px solid #ff2d2d;color:#ff2d2d}
+.conf-tag.htf-long{border:1px solid #00d9a0;color:#00d9a0}
+.conf-tag.htf-short{border:1px solid #ff2d2d;color:#ff2d2d}
+.conf-tag.swept-long{border:1px solid #00d9a0;color:#00d9a0}
+.conf-tag.swept-short{border:1px solid #ff2d2d;color:#ff2d2d}
+.conf-tag.vol-weak{border:1px solid #888;color:#888}
+.conf-tag.vol-good{border:1px solid #ff8c42;color:#ff8c42}
+.conf-tag.vol-strong-long{border:1px solid #00d9a0;color:#00d9a0;box-shadow:0 0 8px rgba(0,217,160,0.3)}
+.conf-tag.vol-strong-short{border:1px solid #ff2d2d;color:#ff2d2d;box-shadow:0 0 8px rgba(255,45,45,0.3)}
+
+/* CONFIRMATION DETAILS */
+.confirm-details{background:linear-gradient(135deg,var(--bg4),rgba(255,215,0,0.05));border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid rgba(255,215,0,0.2)}
+.confirm-title{font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px}
+.confirm-row{display:flex;justify-content:space-between;padding:4px 0}
+.confirm-label{font-size:10px;color:var(--text3)}
+.confirm-value{font-size:11px;font-weight:600}
+.confirm-value.pass{color:var(--long)}
+.confirm-value.fail{color:var(--short)}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-text{font-size:14px;margin-bottom:8px}
+.empty-sub{font-size:11px;color:var(--text3)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--long);padding:12px 24px;border-radius:10px;font-size:13px;z-index:1000;color:var(--long);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+
+/* SETTINGS MODAL */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,5,5,0.95);z-index:2000;justify-content:center;align-items:center}
+.modal.active{display:flex}
+.modal-content{background:linear-gradient(135deg,#120808,#1a0a0a);border-radius:16px;width:90%;max-width:400px;max-height:85vh;overflow-y:auto;border:1px solid #e31937}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #3a2020;position:sticky;top:0;background:linear-gradient(135deg,#120808,#1a0a0a)}
+.modal-header h3{font-size:16px;margin:0;color:#ff6b6b}
+.close-btn{font-size:20px;cursor:pointer;color:#ff6b6b}
+.modal-body{padding:16px}
+.settings-section{margin-bottom:20px}
+.section-title{font-size:12px;color:#ff4d6d;font-weight:700;margin-bottom:12px;text-transform:uppercase}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #3a2020}
+.toggle-row span{font-size:13px;color:var(--text2)}
+.switch{position:relative;width:44px;height:24px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#3a2020;border-radius:24px;transition:0.3s}
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:var(--text3);border-radius:50%;transition:0.3s}
+input:checked + .slider{background:#e31937}
+input:checked + .slider:before{transform:translateX(20px);background:#fff}
+.input-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #3a2020}
+.input-row span{font-size:13px;color:var(--text2)}
+.input-row input{width:70px;padding:8px;background:#1a1010;border:1px solid #3a2020;border-radius:6px;color:var(--text);text-align:center;font-size:13px}
+.history-stats{display:flex;justify-content:space-around;padding:12px 0}
+.hist-stat{text-align:center}
+.hist-num{display:block;font-size:24px;font-weight:700;color:#ff6b6b}
+.hist-lbl{font-size:10px;color:var(--text3);text-transform:uppercase}
+.clear-btn{width:100%;padding:10px;background:rgba(255,45,45,0.15);border:1px solid #ff2d2d;border-radius:8px;color:#ff2d2d;font-size:12px;cursor:pointer;margin-top:10px}
+
+/* TELEGRAM SETTINGS */
+.telegram-section{background:linear-gradient(135deg,rgba(0,150,136,0.05),rgba(0,150,136,0.02));border:1px solid rgba(0,150,136,0.2);border-radius:10px;padding:15px;margin-top:15px}
+.telegram-section .section-title{color:#26a69a}
+.section-subtitle{font-size:11px;color:#80cbc4;font-weight:600;margin:15px 0 10px 0;padding-top:10px;border-top:1px solid rgba(0,150,136,0.2)}
+.input-row input[type="text"]{width:100%;margin-top:6px;text-align:left;font-size:11px}
+.input-row select{width:120px;padding:8px;background:#1a1010;border:1px solid #3a2020;border-radius:6px;color:var(--text);font-size:12px}
+.test-btn{width:100%;padding:10px;background:rgba(0,150,136,0.15);border:1px solid #26a69a;border-radius:8px;color:#26a69a;font-size:12px;cursor:pointer;margin:10px 0;transition:all 0.2s}
+.test-btn:active{transform:scale(0.98);background:rgba(0,150,136,0.25)}
+.telegram-stats{display:flex;justify-content:space-around;padding:12px 0;margin-top:10px;background:rgba(0,0,0,0.2);border-radius:8px}
+.tg-stat{text-align:center}
+.tg-num{display:block;font-size:18px;font-weight:700;color:#26a69a}
+.tg-lbl{font-size:9px;color:var(--text3);text-transform:uppercase}
+
+/* COIN MANAGEMENT */
+.coins-section{background:linear-gradient(135deg,rgba(255,193,7,0.05),rgba(255,193,7,0.02));border:1px solid rgba(255,193,7,0.2);border-radius:10px;padding:15px;margin-top:15px}
+.coins-section .section-title{color:#ffc107}
+.coin-stats{text-align:center;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:12px;font-size:13px;color:var(--text2)}
+.coin-stats strong{color:#ffc107;font-size:18px}
+.add-coin-btn,.remove-coin-btn{padding:8px 12px;border-radius:6px;border:none;cursor:pointer;font-size:14px}
+.add-coin-btn{background:#00d9a0;color:#000}
+.remove-coin-btn{background:#ff2d2d;color:#fff}
+.coin-actions{display:flex;gap:8px;margin-top:12px}
+.coin-action-btn{flex:1;padding:8px;background:rgba(255,193,7,0.15);border:1px solid #ffc107;border-radius:6px;color:#ffc107;font-size:11px;cursor:pointer}
+.coin-list-display{margin-top:12px;max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;font-size:10px;color:var(--text2);line-height:1.8}
+.coin-tag{display:inline-block;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);padding:2px 6px;border-radius:4px;margin:2px;font-size:9px;cursor:pointer}
+.coin-tag:hover{background:rgba(255,45,45,0.2);border-color:#ff2d2d}
+
+.settings-btn{position:fixed;bottom:20px;right:20px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#e31937,#ff3c3c);border:none;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(227,25,55,0.5);z-index:100}
+.regime-badge{font-size:9px;padding:3px 8px;border-radius:10px;margin-left:4px}
+.regime-badge.trend{background:var(--long-dim);color:var(--long)}
+.regime-badge.range{background:var(--blue-dim);color:var(--blue)}
+.regime-badge.chop{background:var(--short-dim);color:var(--short)}
+.hist-badge{font-size:10px;color:var(--cyan);background:var(--cyan-dim);padding:4px 8px;border-radius:6px;margin-bottom:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+    <!-- CONTROLS -->
+    <div class="controls">
+        <button class="scan-btn" id="scanBtn" onclick="startScan()">⚡ SCAN ${CONFIG.coins.length} COINS</button>
+    </div>
+    <div class="status-bar" id="statusBar">Ready • Liquidity + Volume Scanner</div>
+
+    <!-- MAIN TABS -->
+    <div class="main-tabs">
+        <div class="main-tab limit active" onclick="showMainTab('limit')">📍 LIMIT<span class="cnt" id="limitCnt">0</span></div>
+        <div class="main-tab confirmed" onclick="showMainTab('confirmed')">✅ CONFIRMED<span class="cnt" id="confirmedCnt">0</span></div>
+        <div class="main-tab caution" onclick="showMainTab('caution')">⚠️ CAUTION<span class="cnt" id="cautionCnt">0</span></div>
+        <div class="main-tab watch" onclick="showMainTab('watch')">👁 WATCH<span class="cnt" id="watchCnt">0</span></div>
+    </div>
+
+    <!-- SUB TABS -->
+    <div class="sub-tabs">
+        <div class="sub-tab long active" onclick="showSubTab('long')">🟢 LONG <span class="cnt" id="longCnt">0</span></div>
+        <div class="sub-tab short" onclick="showSubTab('short')">🔴 SHORT <span class="cnt" id="shortCnt">0</span></div>
+    </div>
+
+    <!-- PANELS -->
+    <div class="panel active" id="limitPanel">
+        <div class="signal-list" id="limitList">
+            <div class="empty">
+                <div class="empty-icon">📍</div>
+                <div class="empty-text">No Limit Setups Yet</div>
+                <div class="empty-sub">Tap SCAN to find pools for limit orders</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="confirmedPanel">
+        <div class="signal-list" id="confirmedList">
+            <div class="empty">
+                <div class="empty-icon">✅</div>
+                <div class="empty-text">No Confirmed Signals Yet</div>
+                <div class="empty-sub">Confirmed signals appear after grab + rejection</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="cautionPanel">
+        <div class="signal-list" id="cautionList">
+            <div class="empty">
+                <div class="empty-icon">⚠️</div>
+                <div class="empty-text">No Caution Signals</div>
+                <div class="empty-sub">Liquidity only signals (no volume) appear here</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" id="watchPanel">
+        <div class="signal-list" id="watchList">
+            <div class="empty">
+                <div class="empty-icon">👁</div>
+                <div class="empty-text">Watchlist Empty</div>
+                <div class="empty-sub">Forming pools will appear here</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settingsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚙️ Scanner Settings</h3>
+            <span class="close-btn" onclick="closeSettings()">✕</span>
+        </div>
+        <div class="modal-body">
+            <div class="settings-section">
+                <div class="section-title">🎯 Filter Toggles</div>
+                <div class="toggle-row">
+                    <span>Volume Filter</span>
+                    <label class="switch"><input type="checkbox" id="toggleVolume" checked onchange="saveSetting('useVolume', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>HTF Alignment</span>
+                    <label class="switch"><input type="checkbox" id="toggleHTF" checked onchange="saveSetting('useHTF', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>Zone Confluence</span>
+                    <label class="switch"><input type="checkbox" id="toggleZone" checked onchange="saveSetting('useZone', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>Stacked TFs</span>
+                    <label class="switch"><input type="checkbox" id="toggleStacked" checked onchange="saveSetting('useStacked', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>Sweep Confirmation</span>
+                    <label class="switch"><input type="checkbox" id="toggleSweep" checked onchange="saveSetting('useSweep', this.checked)"><span class="slider"></span></label>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="section-title">📊 Advanced Filters</div>
+                <div class="toggle-row">
+                    <span>Regime Filter (Trend/Range/Chop)</span>
+                    <label class="switch"><input type="checkbox" id="toggleRegime" onchange="saveSetting('useRegime', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>Outcome Learning (AI Evolution)</span>
+                    <label class="switch"><input type="checkbox" id="toggleLearning" onchange="saveSetting('useLearning', this.checked)"><span class="slider"></span></label>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="section-title">🎚️ Thresholds</div>
+                <div class="input-row">
+                    <span>Min Touches</span>
+                    <input type="number" id="inputTouches" value="2" min="1" max="10" onchange="saveSetting('minTouches', +this.value)">
+                </div>
+                <div class="input-row">
+                    <span>Min Score</span>
+                    <input type="number" id="inputScore" value="40" min="20" max="90" onchange="saveSetting('minScore', +this.value)">
+                </div>
+                <div class="input-row">
+                    <span>Max Distance %</span>
+                    <input type="number" id="inputDistance" value="2.5" min="0.5" max="10" step="0.5" onchange="saveSetting('maxDistance', +this.value/100)">
+                </div>
+            </div>
+            
+            <div class="settings-section coins-section">
+                <div class="section-title">🪙 Coin Management</div>
+                <div class="coin-stats">
+                    <span>Active: <strong id="coinCount">350</strong> coins</span>
+                </div>
+                <div class="input-row" style="flex-direction:column;align-items:stretch">
+                    <span style="margin-bottom:8px">Add Coin</span>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="inputAddCoin" placeholder="e.g. NEWUSDT" style="flex:1;text-transform:uppercase">
+                        <button class="add-coin-btn" onclick="addCoin()">➕</button>
+                    </div>
+                </div>
+                <div class="input-row" style="flex-direction:column;align-items:stretch">
+                    <span style="margin-bottom:8px">Remove Coin</span>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="inputRemoveCoin" placeholder="e.g. BTCUSDT" style="flex:1;text-transform:uppercase">
+                        <button class="remove-coin-btn" onclick="removeCoin()">🗑️</button>
+                    </div>
+                </div>
+                <div class="coin-actions">
+                    <button class="coin-action-btn" onclick="showCoinList()">📋 View All</button>
+                    <button class="coin-action-btn" onclick="resetCoins()">🔄 Reset Default</button>
+                </div>
+                <div id="coinListDisplay" class="coin-list-display" style="display:none"></div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="section-title">📈 Trade History</div>
+                <div class="history-stats">
+                    <div class="hist-stat"><span class="hist-num" id="histWins">0</span><span class="hist-lbl">Wins</span></div>
+                    <div class="hist-stat"><span class="hist-num" id="histLosses">0</span><span class="hist-lbl">Losses</span></div>
+                    <div class="hist-stat"><span class="hist-num" id="histRate">0%</span><span class="hist-lbl">Win Rate</span></div>
+                </div>
+                <button class="clear-btn" onclick="clearHistory()">🗑️ Clear History</button>
+            </div>
+            
+            <div class="settings-section telegram-section">
+                <div class="section-title">📱 Telegram Alerts</div>
+                <div class="toggle-row">
+                    <span>Enable Telegram</span>
+                    <label class="switch"><input type="checkbox" id="toggleTelegram" onchange="saveTelegramSetting('enabled', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="input-row">
+                    <span>Bot Token</span>
+                    <input type="text" id="inputBotToken" placeholder="123456:ABC-DEF..." onchange="saveTelegramSetting('token', this.value)">
+                </div>
+                <div class="input-row">
+                    <span>Chat ID</span>
+                    <input type="text" id="inputChatId" placeholder="-100123456789" onchange="saveTelegramSetting('chatId', this.value)">
+                </div>
+                <button class="test-btn" onclick="testTelegram()">🔔 Test Connection</button>
+                
+                <div class="section-subtitle">🎯 Alert Filters</div>
+                <div class="input-row">
+                    <span>Min Grade</span>
+                    <select id="selectMinGrade" onchange="saveTelegramSetting('minGrade', this.value)">
+                        <option value="VALID">VALID (60+)</option>
+                        <option value="STRONG" selected>STRONG (75+)</option>
+                        <option value="PERFECT">PERFECT (90+)</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <span>Cooldown (min)</span>
+                    <input type="number" id="inputCooldown" value="5" min="1" max="60" onchange="saveTelegramSetting('cooldown', +this.value)">
+                </div>
+                <div class="toggle-row">
+                    <span>Detailed Alerts</span>
+                    <label class="switch"><input type="checkbox" id="toggleDetailed" checked onchange="saveTelegramSetting('detailed', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>CREAM/PERFECT VIP</span>
+                    <label class="switch"><input type="checkbox" id="toggleCream" checked onchange="saveTelegramSetting('cream', this.checked)"><span class="slider"></span></label>
+                </div>
+                
+                <div class="section-subtitle">🔔 Notifications</div>
+                <div class="toggle-row">
+                    <span>TP Hit Alerts</span>
+                    <label class="switch"><input type="checkbox" id="toggleTPAlerts" checked onchange="saveTelegramSetting('tpAlerts', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>SL Hit Alerts</span>
+                    <label class="switch"><input type="checkbox" id="toggleSLAlerts" checked onchange="saveTelegramSetting('slAlerts', this.checked)"><span class="slider"></span></label>
+                </div>
+                <div class="toggle-row">
+                    <span>Daily Summary</span>
+                    <label class="switch"><input type="checkbox" id="toggleDailySummary" onchange="saveTelegramSetting('dailySummary', this.checked)"><span class="slider"></span></label>
+                </div>
+                
+                <div class="section-subtitle">🌙 Quiet Hours</div>
+                <div class="input-row">
+                    <span>Start Hour</span>
+                    <input type="number" id="inputQuietStart" placeholder="23" min="0" max="23" onchange="saveTelegramSetting('quietStart', this.value)">
+                </div>
+                <div class="input-row">
+                    <span>End Hour</span>
+                    <input type="number" id="inputQuietEnd" placeholder="7" min="0" max="23" onchange="saveTelegramSetting('quietEnd', this.value)">
+                </div>
+                
+                <div class="telegram-stats">
+                    <div class="tg-stat"><span class="tg-num" id="tgSent">0</span><span class="tg-lbl">Sent</span></div>
+                    <div class="tg-stat"><span class="tg-num" id="tgSkipped">0</span><span class="tg-lbl">Skipped</span></div>
+                    <div class="tg-stat"><span class="tg-num" id="tgErrors">0</span><span class="tg-lbl">Errors</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="settings-btn" onclick="openSettings()">⚙️</button>
+<div class="toast" id="toast" style="display:none"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🚗 JUNIPER SCANNER - ULTRA RED EDITION (Model Y 2026)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const CONFIG = {
+    baseUrl: 'https://api.bybit.com',
+    defaultCoins: [
+        // TOP 50 - Major Coins
+        'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','AVAXUSDT',
+        'DOTUSDT','MATICUSDT','LINKUSDT','LTCUSDT','ATOMUSDT','UNIUSDT','ETCUSDT','XLMUSDT',
+        'APTUSDT','NEARUSDT','ARBUSDT','OPUSDT','SUIUSDT','INJUSDT','SEIUSDT','FTMUSDT',
+        'TONUSDT','TRXUSDT','ICPUSDT','HBARUSDT','VETUSDT','ALGOUSDT','FLOWUSDT','EGLDUSDT',
+        'XTZUSDT','EOSUSDT','AXSUSDT','SANDUSDT','MANAUSDT','GALAUSDT','APEUSDT','IMXUSDT',
+        'MINAUSDT','KASUSDT','STXUSDT','TIAUSDT','BLURUSDT','AAVEUSDT','LDOUSDT','MKRUSDT',
+        'SNXUSDT','COMPUSDT',
+        // 51-100 - DeFi & Layer 2
+        'CRVUSDT','YFIUSDT','SUSHIUSDT','1INCHUSDT','GMXUSDT','DYDXUSDT','PENDLEUSDT','RUNEUSDT',
+        'JUPUSDT','ENSUSDT','BALUSDT','ZRXUSDT','KAVAUSDT','WOOUSDT','FETUSDT','AGIXUSDT',
+        'OCEANUSDT','RENDERUSDT','RLCUSDT','GRTUSDT','FILUSDT','ARUSDT','STORJUSDT','ANKRUSDT',
+        'IOTAUSDT','ENJUSDT','CHZUSDT','FLOKIUSDT','MAGICUSDT','ILVUSDT','YGGUSDT','ACEUSDT',
+        'PIXELUSDT','PEPEUSDT','BONKUSDT','WIFUSDT','SHIBUSDT','MEMEUSDT','BOMEUSDT','MEWUSDT',
+        'NEIROUSDT','DOGSUSDT','CATIUSDT','PYTHUSDT','WLDUSDT','STRKUSDT','ZKUSDT','MANTAUSDT',
+        'ZETAUSDT','GLMUSDT',
+        // 101-150 - Gaming & Metaverse
+        'ORDIUSDT','THETAUSDT','JASMYUSDT','ZILUSDT','ONTUSDT','COTIUSDT','SKLUSDT','LRCUSDT',
+        'KSMUSDT','RSRUSDT','DENTUSDT','HOTUSDT','SFPUSDT','DUSKUSDT','LITUSDT','AUDIOUSDT',
+        'RVNUSDT','SUNUSDT','TLMUSDT','RADUSDT','NKNUSDT','LPTUSDT','GTCUSDT','ACHUSDT',
+        'DARUSDT','BICOUSDT','EDUUSDT','IDUSDT','MAVUSDT','ARKMUSDT','CYBERUSDT','BIGTIMEUSDT',
+        'NFPUSDT','AIUSDT','XAIUSDT','AXLUSDT','METISUSDT','TAOUSDT','NOTUSDT','IOUSDT',
+        'LISTAUSDT','BBUSDT','SAGAUSDT','OMNIUSDT','REZUSDT','ETHFIUSDT','ENAUSDT','WUSDT',
+        'TNSORUSDT','MNTUSDT',
+        // 151-200 - Infrastructure & New
+        'POLYXUSDT','GASUSDT','AKTUSDT','PNUTUSDT','ACTUSDT','VANAUSDT','MOVEUSDT','MEUSDT',
+        'VIRTUALUSDT','PENGUUSDT','USUALUSDT','SPXUSDT','CGPTUSDT','PHAUSDT','RNDRUSDT','HMSTRUSDT',
+        'LUNCUSDT','PEOPLEUSDT','PORTALUSDT','RONINUSDT','HIGHUSDT','LOOKSUSDT','SLPUSDT','ANTUSDT',
+        'XEMUSDT','REEFUSDT','MDTUSDT','XVGUSDT','DGBUSDT','HNTUSDT','PAXGUSDT','LOOMUSDT',
+        'TOKENUSDT','DYMUSDT','PDAUSDT','SCRUSDT','AGIUSDT','MYROUSDT','SAFEUSDT','MOTHERUSDT',
+        'ZKFUSDT','GOATUSDT','BANUSDT','LUCEUSDT','DEGENUSDT','TROYUSDT','CHILLGUYUSDT','HIPPOUSDT',
+        'KIKIUSDT','SANTAUSDT',
+        // 201-250 - Extended Altcoins
+        'CELRUSDT','OGNUSDT','STMXUSDT','CTSIUSDT','BANDUSDT','NEOUSDT','WAVESUSDT','DASHUSDT',
+        'ZECUSDT','BCHUSDT','BSVUSDT','QTUMUSDT','IOSTUSDT','OMGUSDT','ZENUSDT','BATUSDT',
+        'SCUSDT','DCRUSDT','ICXUSDT','BTGUSDT','RVNUSDT','SYSUSDT','STPTUSDT','CKBUSDT',
+        'SNTUSDT','REQUSDT','POWRUSDT','OXTUSDT','NMRUSDT','MLNUSDT','LSKUSDT','KNCUSDT',
+        'KEYUSDT','JSTUSDT','HIVEUSDT','HARDUSDT','FORTHUSDT','FLMUSDT','FIROUSDT','ERNUSDT',
+        'ELFUSDT','DREPUSDT','DODOUSDT','DIAUSDT','DATAUSDT','CTXCUSDT','CVCUSDT','COSUSDT',
+        'CKBUSDT','CELOUSDT',
+        // 251-300 - More Alts
+        'CFXUSDT','BELUSDT','ATAUSDT','ARUSDT','ALPACAUSDT','AGLDUSDT','ADXUSDT','ACMUSDT',
+        'ATMUSDT','ASRUSDT','ARPAUSDT','ALPHAUSDT','ALICEUSDT','ALCXUSDT','AKROUSDT','AERGOUSDT',
+        'AEROUSDT','ADAUSDT','ACHUSDT','API3USDT','PONDUSDT','PERPUSDT','PHBUSDT','PLAUSDT',
+        'PROMUSDT','PSGUSDT','QUICKUSDT','QIUSDT','QNTUSDT','RAREUSDT','RAYUSDT','RDNTUSDT',
+        'RIFUSDT','ROSEUSDT','RPLUSDT','RSS3USDT','RSSUSDT','SANTOSUSDT','SCRTUSDT','SEIUSDT',
+        'SFUNDUSDT','SSVUSDT','STEEMUSDT','STGUSDT','STORJUSDT','STRAXUSDT','STXUSDT','SUPERUSDT',
+        'SXPUSDT','SYNUSDT',
+        // 301-350 - Latest & Emerging
+        'TWTUSDT','TUSDT','TRUUSDT','TRIBUSDT','TORNUSDT','TNSRUSDT','TKOUSDT','TCTUSDT',
+        'TRBUSDT','TVKUSDT','UMAUSDT','UNFIUSDT','UTKUSDT','VIDTUSDT','VITEUSDT','VOXELUSDT',
+        'VTHOUSDT','WANUSDT','WINUSDT','WNXMUSDT','XECUSDT','XNOUSDT','XVSUSDT','YFIIUSDT',
+        'YOOUSDT','ZLOYUSDT','COMBOUSDT','LQTYUSDT','LEVERUSDT','BLUEBIRDUSDT','HIFIUSDT',
+        'BONDUSDT','OMUSDT','ONGUSDT','OOKIUSDT','ORBSUSDT','OSMOUSDT','PUNDIXUSDT','REIUSDT',
+        'RENUSDT','REPUSDT','FLUXUSDT','ASTRUSDT','CAKEUSDT','IQUSDT','MCUSDT',
+        'NEXOUSDT','OGUSDT','SLFUSDT','SDUSDT','BTTCUSDT','C98USDT','KAITUSDT','SYNRUSDT',
+        'XCHUSDT','FXSUSDT','CQTUSDT','GHSTUSDT'
+    ],
+    coins: [], // Will be populated from localStorage or defaultCoins
+    timeframes: ['15', '30', '60', '240'],
+    pool: {
+        swingLen: 5,
+        minTouches: 2,
+        equalRange: 0.003,      // 0.3% for equal highs/lows
+        clusterRange: 0.008    // 0.8% for clustering
+    },
+    sweep: {
+        wickRatio: 0.4,         // Min 40% rejection wick
+        volumeSpike: 1.5,       // 1.5x avg volume
+        lookback: 10            // Bars to check for sweep
+    },
+    limits: {
+        maxDistance: 0.025,     // Max 2.5% away for limit setup
+        atLevelDist: 0.003      // 0.3% = at level
+    },
+    grades: {
+        PERFECT: 88,
+        STRONG: 72,
+        VALID: 55,
+        HEATING: 40
+    },
+    parallel: 20,
+    delay: 30
+};
+
+let STATE = {
+    scanning: false,
+    mainTab: 'limit',
+    subTab: 'long',
+    signals: {
+        limit: { long: [], short: [] },
+        confirmed: { long: [], short: [] },
+        caution: { long: [], short: [] },
+        watch: { long: [], short: [] }
+    },
+    settings: {
+        useVolume: true,
+        useHTF: true,
+        useZone: true,
+        useStacked: true,
+        useSweep: true,
+        useRegime: false,      // OFF by default
+        useLearning: false,    // OFF by default
+        minTouches: 2,
+        minScore: 40,
+        maxDistance: 0.025
+    },
+    history: {
+        trades: [],
+        wins: 0,
+        losses: 0
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TELEGRAM CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+const TELEGRAM = {
+    enabled: false,
+    token: '',
+    chatId: '',
+    minGrade: 'STRONG',
+    cooldown: 5,            // minutes
+    detailed: true,
+    cream: true,            // VIP alerts for PERFECT
+    tpAlerts: true,
+    slAlerts: true,
+    dailySummary: false,
+    quietStart: null,       // hour 0-23
+    quietEnd: null,         // hour 0-23
+    // Runtime stats
+    stats: { sent: 0, skipped: 0, errors: 0 },
+    cooldowns: new Map()    // symbol -> lastSentTime
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════════
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function fmt(p) {
+    if (!p || isNaN(p)) return '--';
+    if (p >= 10000) return p.toFixed(1);
+    if (p >= 100) return p.toFixed(2);
+    if (p >= 1) return p.toFixed(4);
+    if (p >= 0.01) return p.toFixed(5);
+    return p.toFixed(8);
+}
+
+function pct(v) {
+    return (v * 100).toFixed(2) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('lhc_settings');
+        if (saved) {
+            const s = JSON.parse(saved);
+            STATE.settings = { ...STATE.settings, ...s };
+        }
+        const history = localStorage.getItem('lhc_history');
+        if (history) {
+            STATE.history = JSON.parse(history);
+        }
+    } catch(e) { console.log('Settings load error:', e); }
+    applySettingsToUI();
+}
+
+function applySettingsToUI() {
+    const s = STATE.settings;
+    document.getElementById('toggleVolume').checked = s.useVolume;
+    document.getElementById('toggleHTF').checked = s.useHTF;
+    document.getElementById('toggleZone').checked = s.useZone;
+    document.getElementById('toggleStacked').checked = s.useStacked;
+    document.getElementById('toggleSweep').checked = s.useSweep;
+    document.getElementById('toggleRegime').checked = s.useRegime;
+    document.getElementById('toggleLearning').checked = s.useLearning;
+    document.getElementById('inputTouches').value = s.minTouches;
+    document.getElementById('inputScore').value = s.minScore;
+    document.getElementById('inputDistance').value = (s.maxDistance * 100).toFixed(1);
+    updateHistoryDisplay();
+}
+
+function saveSetting(key, value) {
+    STATE.settings[key] = value;
+    localStorage.setItem('lhc_settings', JSON.stringify(STATE.settings));
+    toast(`✅ ${key} = ${value}`);
+}
+
+function saveHistory() {
+    localStorage.setItem('lhc_history', JSON.stringify(STATE.history));
+    updateHistoryDisplay();
+}
+
+function updateHistoryDisplay() {
+    const h = STATE.history;
+    document.getElementById('histWins').textContent = h.wins;
+    document.getElementById('histLosses').textContent = h.losses;
+    const total = h.wins + h.losses;
+    const rate = total > 0 ? ((h.wins / total) * 100).toFixed(0) : 0;
+    document.getElementById('histRate').textContent = rate + '%';
+}
+
+function clearHistory() {
+    if (confirm('Clear all trade history? This cannot be undone.')) {
+        STATE.history = { trades: [], wins: 0, losses: 0 };
+        saveHistory();
+        toast('🗑️ History cleared');
+    }
+}
+
+function openSettings() {
+    document.getElementById('settingsModal').classList.add('active');
+}
+
+function closeSettings() {
+    document.getElementById('settingsModal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// V2 ADVANCED LIQUIDITY HUNTING ENGINE (THE KING)
+// ═══════════════════════════════════════════════════════════════════════════════
+// ~1500+ lines of institutional-grade liquidity analysis
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 1: ADVANCED REGIME DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ADVANCED MARKET REGIME DETECTION
+ * Determines: TREND / RANGE / CHOP / EXPANSION / COMPRESSION
+ */
+function detectRegime(candles) {
+    if (!candles || candles.length < 50) {
+        return { regime: 'UNKNOWN', score: 0, favorable: false, subType: null };
+    }
+    
+    const len = 20;
+    const recent = candles.slice(-len);
+    
+    // Calculate ADX components
+    let plusDM = 0, minusDM = 0, trSum = 0;
+    for (let i = 1; i < recent.length; i++) {
+        const curr = recent[i];
+        const prev = recent[i - 1];
+        
+        const highDiff = curr.h - prev.h;
+        const lowDiff = prev.l - curr.l;
+        
+        if (highDiff > lowDiff && highDiff > 0) plusDM += highDiff;
+        if (lowDiff > highDiff && lowDiff > 0) minusDM += lowDiff;
+        
+        const tr = Math.max(
+            curr.h - curr.l, 
+            Math.abs(curr.h - prev.c), 
+            Math.abs(curr.l - prev.c)
+        );
+        trSum += tr;
+    }
+    
+    const plusDI = trSum > 0 ? (plusDM / trSum) * 100 : 0;
+    const minusDI = trSum > 0 ? (minusDM / trSum) * 100 : 0;
+    const dx = (plusDI + minusDI) > 0 ? Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100 : 0;
+    
+    // Price efficiency (trending vs choppy)
+    const priceChange = Math.abs(recent[len - 1].c - recent[0].c);
+    let totalMovement = 0;
+    for (let i = 1; i < recent.length; i++) {
+        totalMovement += Math.abs(recent[i].c - recent[i - 1].c);
+    }
+    const efficiency = totalMovement > 0 ? priceChange / totalMovement : 0;
+    
+    // Volatility analysis
+    const ranges = recent.map(c => c.h - c.l);
+    const avgRange = ranges.reduce((a, b) => a + b, 0) / ranges.length;
+    const rangeStdDev = Math.sqrt(ranges.reduce((sum, r) => sum + Math.pow(r - avgRange, 2), 0) / ranges.length);
+    const volatilityConsistency = avgRange > 0 ? 1 - (rangeStdDev / avgRange) : 0;
+    
+    // ATR expansion/compression
+    const atrRecent = ranges.slice(-5).reduce((a, b) => a + b, 0) / 5;
+    const atrOlder = ranges.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const atrRatio = atrOlder > 0 ? atrRecent / atrOlder : 1;
+    
+    // Determine regime
+    let regime = 'RANGE';
+    let subType = null;
+    let score = 50;
+    
+    if (dx > 25 && efficiency > 0.4) {
+        regime = 'TREND';
+        score = Math.min(100, 50 + dx + (efficiency * 50));
+        subType = plusDI > minusDI ? 'UPTREND' : 'DOWNTREND';
+    } else if (volatilityConsistency < 0.3 || (dx > 15 && dx < 25 && efficiency < 0.3)) {
+        regime = 'CHOP';
+        score = Math.min(100, 50 + (1 - volatilityConsistency) * 50);
+        subType = 'ERRATIC';
+    } else {
+        regime = 'RANGE';
+        score = Math.min(100, 50 + volatilityConsistency * 50);
+        
+        // Check for expansion/compression
+        if (atrRatio > 1.3) {
+            subType = 'EXPANSION';
+        } else if (atrRatio < 0.7) {
+            subType = 'COMPRESSION';
+        } else {
+            subType = 'BALANCED';
+        }
+    }
+    
+    return {
+        regime,
+        subType,
+        score: Math.round(score),
+        dx: dx.toFixed(1),
+        efficiency: (efficiency * 100).toFixed(0),
+        volatilityConsistency: (volatilityConsistency * 100).toFixed(0),
+        atrRatio: atrRatio.toFixed(2),
+        plusDI: plusDI.toFixed(1),
+        minusDI: minusDI.toFixed(1),
+        favorable: regime !== 'CHOP',
+        tradingAdvice: regime === 'TREND' ? 'Trade with trend' : 
+                       regime === 'RANGE' ? 'Trade reversals at extremes' : 
+                       'Avoid or reduce size'
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OUTCOME LEARNING (TRADE HISTORY ANALYSIS)
+// ═══════════════════════════════════════════════════════════════════════════════
+function recordTrade(signal, outcome) {
+    // outcome: 'win', 'loss', 'breakeven'
+    const trade = {
+        symbol: signal.symbol,
+        direction: signal.direction,
+        mode: signal.mode,
+        score: signal.score,
+        regime: signal.regime?.regime || 'UNKNOWN',
+        stackedTfs: signal.stackedTfs,
+        htfAligned: signal.htf?.aligned || false,
+        timestamp: Date.now(),
+        outcome
+    };
+    
+    STATE.history.trades.push(trade);
+    if (outcome === 'win') STATE.history.wins++;
+    else if (outcome === 'loss') STATE.history.losses++;
+    
+    // Keep only last 200 trades
+    if (STATE.history.trades.length > 200) {
+        STATE.history.trades = STATE.history.trades.slice(-200);
+    }
+    
+    saveHistory();
+}
+
+function getLearningAdjustment(signal) {
+    if (!STATE.settings.useLearning || STATE.history.trades.length < 10) {
+        return 0; // Not enough data
+    }
+    
+    // Find similar past trades
+    const similar = STATE.history.trades.filter(t => {
+        const sameDirection = t.direction === signal.direction;
+        const sameRegime = t.regime === (signal.regime?.regime || 'UNKNOWN');
+        const similarScore = Math.abs(t.score - signal.score) < 15;
+        return sameDirection && sameRegime && similarScore;
+    });
+    
+    if (similar.length < 5) return 0; // Not enough similar trades
+    
+    const wins = similar.filter(t => t.outcome === 'win').length;
+    const winRate = wins / similar.length;
+    
+    // Adjust score based on historical performance
+    // +10 if winRate > 70%, -10 if winRate < 30%
+    if (winRate > 0.7) return 10;
+    if (winRate > 0.6) return 5;
+    if (winRate < 0.3) return -10;
+    if (winRate < 0.4) return -5;
+    return 0;
+}
+
+function getHistoricalWinRate(symbol, direction) {
+    const trades = STATE.history.trades.filter(t => 
+        t.symbol === symbol && t.direction === direction
+    );
+    if (trades.length < 3) return null;
+    
+    const wins = trades.filter(t => t.outcome === 'win').length;
+    return {
+        winRate: ((wins / trades.length) * 100).toFixed(0),
+        trades: trades.length
+    };
+}
+
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function status(txt, active) {
+    const el = document.getElementById('statusBar');
+    el.textContent = txt;
+    el.className = 'status-bar' + (active ? ' active' : '');
+}
+
+function showMainTab(tab) {
+    STATE.mainTab = tab;
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.main-tab.' + tab).classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(tab + 'Panel').classList.add('active');
+    renderCurrentList();
+}
+
+function showSubTab(tab) {
+    STATE.subTab = tab;
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.sub-tab.' + tab).classList.add('active');
+    renderCurrentList();
+}
+
+function renderCurrentList() {
+    const mainTab = STATE.mainTab;
+    const subTab = STATE.subTab;
+    const list = STATE.signals[mainTab][subTab];
+    const listEl = document.getElementById(mainTab + 'List');
+    
+    if (!list || list.length === 0) {
+        const icons = { limit: '📍', confirmed: '✅', caution: '⚠️', watch: '👁' };
+        const titles = { limit: 'No Limit Setups', confirmed: 'No Confirmed Signals', caution: 'No Caution Signals', watch: 'Watchlist Empty' };
+        listEl.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">${icons[mainTab]}</div>
+                <div class="empty-text">${titles[mainTab]}</div>
+                <div class="empty-sub">Tap SCAN to find setups</div>
+            </div>`;
+        return;
+    }
+    
+    if (mainTab === 'limit') {
+        listEl.innerHTML = list.map(renderLimitCard).join('');
+    } else if (mainTab === 'confirmed') {
+        listEl.innerHTML = list.map(renderConfirmedCard).join('');
+    } else if (mainTab === 'caution') {
+        listEl.innerHTML = list.map(renderCautionCard).join('');
+    } else {
+        listEl.innerHTML = list.map(renderWatchCard).join('');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// API FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function fetchKlines(symbol, tf, limit = 150) {
+    try {
+        const res = await fetch(`${CONFIG.baseUrl}/v5/market/kline?category=linear&symbol=${symbol}&interval=${tf}&limit=${limit}`);
+        const data = await res.json();
+        if (data.retCode !== 0 || !data.result?.list) return null;
+        return data.result.list.reverse().map(k => ({
+            t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5]
+        }));
+    } catch(e) { return null; }
+}
+
+async function fetchAllTF(symbol) {
+    const results = {};
+    const promises = CONFIG.timeframes.map(tf => 
+        fetchKlines(symbol, tf).then(c => ({ tf, c }))
+    );
+    const res = await Promise.all(promises);
+    res.forEach(r => { if (r.c && r.c.length > 50) results[r.tf] = r.c; });
+    return results;
+}
+
+async function fetchMulti(coins, progressCb) {
+    const results = {};
+    for (let i = 0; i < coins.length; i += CONFIG.parallel) {
+        const chunk = coins.slice(i, i + CONFIG.parallel);
+        const promises = chunk.map(sym => fetchAllTF(sym).then(d => ({ sym, d })));
+        const res = await Promise.all(promises);
+        res.forEach(r => { 
+            if (r.d && Object.keys(r.d).length >= 2) results[r.sym] = r.d; 
+        });
+        if (progressCb) progressCb(i + chunk.length, coins.length);
+        if (i + CONFIG.parallel < coins.length) await sleep(CONFIG.delay);
+    }
+    return results;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 2: ADVANCED LIQUIDITY POOL DETECTION (Multi-Algorithm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ADVANCED LIQUIDITY POOL FINDER
+ * Uses 3 algorithms: Swing-based, Volume Cluster, Wick Rejection
+ */
+function findPools(candles, isSSL) {
+    if (!candles || candles.length < 50) return [];
+    
+    const cfg = CONFIG.pool;
+    
+    // ALGORITHM 1: Swing-based pool detection
+    const swingPools = findSwingBasedPools(candles, isSSL, cfg);
+    
+    // ALGORITHM 2: Volume cluster detection
+    const volumePools = findVolumeClusterPools(candles, isSSL);
+    
+    // ALGORITHM 3: Wick rejection clusters
+    const wickPools = findWickRejectionPools(candles, isSSL);
+    
+    // MERGE and DEDUPLICATE pools
+    const allPools = mergeLiquidityPools([...swingPools, ...volumePools, ...wickPools], cfg.clusterRange || 0.008);
+    
+    // Score and rank pools
+    const scoredPools = allPools.map(pool => ({
+        ...pool,
+        compositeScore: calculatePoolScore(pool, candles, isSSL)
+    }));
+    
+    // Sort by composite score
+    scoredPools.sort((a, b) => b.compositeScore - a.compositeScore);
+    
+    return scoredPools.slice(0, 5);
+}
+
+/**
+ * SWING-BASED POOL DETECTION (Algorithm 1)
+ */
+function findSwingBasedPools(candles, isSSL, cfg) {
+    const swings = [];
+    const periods = [3, 5, 8]; // Multi-period for robustness
+    
+    for (const period of periods) {
+        for (let i = period; i < candles.length - period; i++) {
+            const c = candles[i];
+            const price = isSSL ? c.h : c.l;
+            let isSwing = true;
+            
+            for (let j = 1; j <= period; j++) {
+                if (isSSL) {
+                    if (candles[i-j].h >= price || candles[i+j].h >= price) { 
+                        isSwing = false; break; 
+                    }
+                } else {
+                    if (candles[i-j].l <= price || candles[i+j].l <= price) { 
+                        isSwing = false; break; 
+                    }
+                }
+            }
+            
+            if (isSwing) {
+                const exists = swings.some(s => Math.abs(s.price - price) / price < 0.001);
+                if (!exists) {
+                    swings.push({ 
+                        price, idx: i, candle: c, volume: c.v || 0, period,
+                        timestamp: c.t || i
+                    });
+                }
+            }
+        }
+    }
+    
+    if (swings.length < 2) return [];
+    return clusterSwingsIntoPools(swings, isSSL, cfg);
+}
+
+/**
+ * VOLUME CLUSTER POOL DETECTION (Algorithm 2)
+ * Finds High Volume Nodes (HVN)
+ */
+function findVolumeClusterPools(candles, isSSL) {
+    if (!candles || candles.length < 30) return [];
+    
+    const priceMin = Math.min(...candles.map(c => c.l));
+    const priceMax = Math.max(...candles.map(c => c.h));
+    const range = priceMax - priceMin;
+    const bucketSize = range / 50;
+    
+    const volumeProfile = {};
+    
+    for (const c of candles) {
+        const candleRange = c.h - c.l;
+        if (candleRange === 0) continue;
+        
+        const bucketStart = Math.floor((c.l - priceMin) / bucketSize);
+        const bucketEnd = Math.floor((c.h - priceMin) / bucketSize);
+        
+        for (let b = bucketStart; b <= bucketEnd && b < 50; b++) {
+            const bucketPrice = priceMin + (b * bucketSize) + (bucketSize / 2);
+            if (!volumeProfile[b]) {
+                volumeProfile[b] = { price: bucketPrice, volume: 0, touches: 0 };
+            }
+            volumeProfile[b].volume += (c.v || 0) / (bucketEnd - bucketStart + 1);
+            volumeProfile[b].touches++;
+        }
+    }
+    
+    const buckets = Object.values(volumeProfile);
+    const avgVolume = buckets.reduce((s, b) => s + b.volume, 0) / buckets.length;
+    
+    const hvnPools = buckets
+        .filter(b => b.volume > avgVolume * 1.5)
+        .map(b => ({
+            type: isSSL ? 'SSL' : 'BSL',
+            price: b.price,
+            lowPrice: b.price - bucketSize / 2,
+            highPrice: b.price + bucketSize / 2,
+            touches: b.touches,
+            volume: b.volume,
+            strength: Math.min(100, (b.volume / avgVolume) * 30),
+            source: 'VOLUME_CLUSTER',
+            isHVN: true
+        }))
+        .filter(p => isSSL ? p.price > candles[candles.length - 1].c : p.price < candles[candles.length - 1].c);
+    
+    return hvnPools.slice(0, 3);
+}
+
+/**
+ * WICK REJECTION POOL DETECTION (Algorithm 3)
+ */
+function findWickRejectionPools(candles, isSSL) {
+    if (!candles || candles.length < 30) return [];
+    
+    const rejections = [];
+    
+    for (let i = 0; i < candles.length; i++) {
+        const c = candles[i];
+        const body = Math.abs(c.c - c.o);
+        const range = c.h - c.l;
+        
+        if (range === 0) continue;
+        
+        if (isSSL) {
+            const topWick = c.h - Math.max(c.o, c.c);
+            const wickRatio = topWick / range;
+            if (wickRatio >= 0.4) {
+                rejections.push({
+                    price: c.h, wickSize: topWick, wickRatio, volume: c.v || 0, idx: i
+                });
+            }
+        } else {
+            const bottomWick = Math.min(c.o, c.c) - c.l;
+            const wickRatio = bottomWick / range;
+            if (wickRatio >= 0.4) {
+                rejections.push({
+                    price: c.l, wickSize: bottomWick, wickRatio, volume: c.v || 0, idx: i
+                });
+            }
+        }
+    }
+    
+    // Cluster rejections
+    const clusters = [];
+    const used = new Set();
+    
+    for (let i = 0; i < rejections.length; i++) {
+        if (used.has(i)) continue;
+        
+        const cluster = [rejections[i]];
+        for (let j = i + 1; j < rejections.length; j++) {
+            if (used.has(j)) continue;
+            const diff = Math.abs(rejections[j].price - rejections[i].price) / rejections[i].price;
+            if (diff <= 0.005) {
+                cluster.push(rejections[j]);
+                used.add(j);
+            }
+        }
+        used.add(i);
+        
+        if (cluster.length >= 2) {
+            const avgPrice = cluster.reduce((s, r) => s + r.price, 0) / cluster.length;
+            const totalVolume = cluster.reduce((s, r) => s + r.volume, 0);
+            const avgWickRatio = cluster.reduce((s, r) => s + r.wickRatio, 0) / cluster.length;
+            
+            clusters.push({
+                type: isSSL ? 'SSL' : 'BSL',
+                price: avgPrice,
+                lowPrice: Math.min(...cluster.map(r => r.price)) * 0.999,
+                highPrice: Math.max(...cluster.map(r => r.price)) * 1.001,
+                touches: cluster.length,
+                volume: totalVolume,
+                strength: cluster.length * 15 + (avgWickRatio * 30),
+                source: 'WICK_REJECTION',
+                avgWickRatio
+            });
+        }
+    }
+    
+    return clusters;
+}
+
+/**
+ * CLUSTER SWINGS INTO POOLS
+ */
+function clusterSwingsIntoPools(swings, isSSL, cfg) {
+    const pools = [];
+    const used = new Set();
+    
+    for (let i = 0; i < swings.length; i++) {
+        if (used.has(i)) continue;
+        
+        const cluster = [swings[i]];
+        for (let j = i + 1; j < swings.length; j++) {
+            if (used.has(j)) continue;
+            const diff = Math.abs(swings[j].price - swings[i].price) / swings[i].price;
+            if (diff <= cfg.equalRange) {
+                cluster.push(swings[j]);
+                used.add(j);
+            }
+        }
+        used.add(i);
+        
+        if (cluster.length >= cfg.minTouches) {
+            const avgPrice = cluster.reduce((s, p) => s + p.price, 0) / cluster.length;
+            const lowestPrice = Math.min(...cluster.map(c => c.price));
+            const highestPrice = Math.max(...cluster.map(c => c.price));
+            const totalVolume = cluster.reduce((s, p) => s + (p.volume || 0), 0);
+            
+            pools.push({
+                type: isSSL ? 'SSL' : 'BSL',
+                price: avgPrice,
+                lowPrice: lowestPrice,
+                highPrice: highestPrice,
+                touches: cluster.length,
+                lastIdx: Math.max(...cluster.map(c => c.idx)),
+                volume: totalVolume,
+                strength: cluster.length * 10 + (totalVolume > 0 ? 10 : 0),
+                source: 'SWING_CLUSTER',
+                timespan: Math.max(...cluster.map(c => c.idx)) - Math.min(...cluster.map(c => c.idx))
+            });
+        }
+    }
+    
+    pools.sort((a, b) => isSSL ? b.price - a.price : a.price - b.price);
+    return pools;
+}
+
+/**
+ * MERGE LIQUIDITY POOLS from different algorithms
+ */
+function mergeLiquidityPools(pools, clusterRange) {
+    if (pools.length === 0) return [];
+    
+    const merged = [];
+    const used = new Set();
+    
+    pools.sort((a, b) => a.price - b.price);
+    
+    for (let i = 0; i < pools.length; i++) {
+        if (used.has(i)) continue;
+        
+        const cluster = [pools[i]];
+        for (let j = i + 1; j < pools.length; j++) {
+            if (used.has(j)) continue;
+            const diff = Math.abs(pools[j].price - pools[i].price) / pools[i].price;
+            if (diff <= clusterRange) {
+                cluster.push(pools[j]);
+                used.add(j);
+            }
+        }
+        used.add(i);
+        
+        const avgPrice = cluster.reduce((s, p) => s + p.price, 0) / cluster.length;
+        const totalTouches = cluster.reduce((s, p) => s + p.touches, 0);
+        const totalVolume = cluster.reduce((s, p) => s + (p.volume || 0), 0);
+        const totalStrength = cluster.reduce((s, p) => s + (p.strength || 0), 0);
+        const sources = [...new Set(cluster.map(p => p.source).filter(Boolean))];
+        
+        merged.push({
+            type: cluster[0].type,
+            price: avgPrice,
+            lowPrice: Math.min(...cluster.map(p => p.lowPrice)),
+            highPrice: Math.max(...cluster.map(p => p.highPrice)),
+            touches: totalTouches,
+            volume: totalVolume,
+            strength: totalStrength,
+            sources,
+            algorithmCount: sources.length,
+            mergedFrom: cluster.length
+        });
+    }
+    
+    return merged;
+}
+
+/**
+ * CALCULATE POOL COMPOSITE SCORE
+ */
+function calculatePoolScore(pool, candles, isSSL) {
+    let score = 0;
+    
+    // Touches (max 30)
+    score += Math.min(30, pool.touches * 8);
+    
+    // Algorithm confirmation (max 25)
+    score += (pool.algorithmCount || 1) * 10;
+    
+    // Volume score (max 20)
+    const avgVolume = candles.slice(-30).reduce((s, c) => s + (c.v || 0), 0) / 30;
+    if (pool.volume > avgVolume * 2) score += 20;
+    else if (pool.volume > avgVolume) score += 10;
+    
+    // Recency (max 15)
+    if (pool.lastIdx) {
+        const recency = pool.lastIdx / candles.length;
+        score += Math.round(recency * 15);
+    }
+    
+    // Distance penalty
+    const currentPrice = candles[candles.length - 1].c;
+    const distance = Math.abs(pool.price - currentPrice) / currentPrice;
+    if (distance > 0.05) score -= 20;
+    else if (distance > 0.03) score -= 10;
+    
+    return Math.max(0, Math.min(100, score));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 3: ADVANCED SWEEP DETECTION (Multi-Type)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ADVANCED SWEEP DETECTION
+ * Detects 3 types: Wick Sweep, Body Sweep, Engulfing Sweep
+ */
+function detectSweep(candles, pool, isSSL) {
+    if (!candles || candles.length < 15) {
+        return { swept: false, confirmed: false, hasVolume: false, sweepType: null };
+    }
+    
+    const cfg = CONFIG.sweep;
+    const last = candles.slice(-cfg.lookback);
+    const avgVol = candles.slice(-30, -10).reduce((s, c) => s + (c.v || 0), 0) / 20;
+    
+    // Check all sweep types
+    const wickSweep = detectWickSweep(last, pool, isSSL, avgVol, cfg);
+    const bodySweep = detectBodySweep(last, pool, isSSL, avgVol);
+    const engulfingSweep = detectEngulfingSweep(last, pool, isSSL, avgVol);
+    
+    // Return best sweep
+    if (wickSweep.swept && wickSweep.confirmed) return { ...wickSweep, sweepType: 'WICK' };
+    if (bodySweep.swept && bodySweep.confirmed) return { ...bodySweep, sweepType: 'BODY' };
+    if (engulfingSweep.swept && engulfingSweep.confirmed) return { ...engulfingSweep, sweepType: 'ENGULFING' };
+    
+    if (wickSweep.swept) return { ...wickSweep, sweepType: 'WICK' };
+    if (bodySweep.swept) return { ...bodySweep, sweepType: 'BODY' };
+    if (engulfingSweep.swept) return { ...engulfingSweep, sweepType: 'ENGULFING' };
+    
+    return { swept: false, confirmed: false, hasVolume: false, sweepType: null };
+}
+
+/**
+ * WICK SWEEP DETECTION
+ */
+function detectWickSweep(candles, pool, isSSL, avgVol, cfg) {
+    for (let i = 0; i < candles.length - 1; i++) {
+        const c = candles[i];
+        const next = candles[i + 1];
+        
+        let grabbed = false;
+        let rejection = false;
+        
+        if (isSSL) {
+            grabbed = c.h > pool.price * 1.001 && c.c < pool.price;
+            const topWick = c.h - Math.max(c.o, c.c);
+            const range = c.h - c.l;
+            rejection = range > 0 && (topWick / range) >= cfg.wickRatio;
+        } else {
+            grabbed = c.l < pool.price * 0.999 && c.c > pool.price;
+            const bottomWick = Math.min(c.o, c.c) - c.l;
+            const range = c.h - c.l;
+            rejection = range > 0 && (bottomWick / range) >= cfg.wickRatio;
+        }
+        
+        if (!grabbed) continue;
+        
+        const hasVolume = (c.v || 0) > avgVol * cfg.volumeSpike;
+        
+        let confirms = false;
+        if (!isSSL && next.c > next.o && next.c > c.c) confirms = true;
+        if (isSSL && next.c < next.o && next.c < c.c) confirms = true;
+        
+        if (grabbed && rejection) {
+            return {
+                swept: true,
+                confirmed: confirms && hasVolume,
+                sweepCandle: c,
+                confirmCandle: next,
+                hasRejection: rejection,
+                hasVolume,
+                volumeRatio: avgVol > 0 ? ((c.v || 0) / avgVol).toFixed(1) : '0',
+                sweepDepth: isSSL 
+                    ? ((c.h - pool.price) / pool.price * 100).toFixed(2)
+                    : ((pool.price - c.l) / pool.price * 100).toFixed(2)
+            };
+        }
+    }
+    return { swept: false, confirmed: false, hasVolume: false };
+}
+
+/**
+ * BODY SWEEP DETECTION
+ */
+function detectBodySweep(candles, pool, isSSL, avgVol) {
+    for (let i = 0; i < candles.length - 2; i++) {
+        const c1 = candles[i];
+        const c2 = candles[i + 1];
+        const c3 = candles[i + 2];
+        
+        let grabbed = false;
+        let reversed = false;
+        
+        if (isSSL) {
+            grabbed = c1.c > pool.price && c1.o < pool.price;
+            reversed = c2.c < pool.price || c3.c < pool.price;
+        } else {
+            grabbed = c1.c < pool.price && c1.o > pool.price;
+            reversed = c2.c > pool.price || c3.c > pool.price;
+        }
+        
+        if (grabbed && reversed) {
+            const hasVolume = (c1.v || 0) > avgVol * 1.5;
+            return {
+                swept: true,
+                confirmed: hasVolume,
+                sweepCandle: c1,
+                confirmCandle: c2,
+                hasRejection: true,
+                hasVolume,
+                volumeRatio: avgVol > 0 ? ((c1.v || 0) / avgVol).toFixed(1) : '0'
+            };
+        }
+    }
+    return { swept: false, confirmed: false, hasVolume: false };
+}
+
+/**
+ * ENGULFING SWEEP DETECTION
+ */
+function detectEngulfingSweep(candles, pool, isSSL, avgVol) {
+    for (let i = 1; i < candles.length - 1; i++) {
+        const prev = candles[i - 1];
+        const curr = candles[i];
+        const next = candles[i + 1];
+        
+        const prevBody = Math.abs(prev.c - prev.o);
+        const currBody = Math.abs(curr.c - curr.o);
+        
+        const atPool = isSSL 
+            ? (curr.h >= pool.price * 0.998)
+            : (curr.l <= pool.price * 1.002);
+        
+        if (!atPool) continue;
+        
+        let isEngulfing = false;
+        let isBullish = false;
+        
+        if (!isSSL && curr.c > curr.o && prev.c < prev.o) {
+            if (curr.c > prev.o && curr.o < prev.c && currBody > prevBody) {
+                isEngulfing = true;
+                isBullish = true;
+            }
+        }
+        
+        if (isSSL && curr.c < curr.o && prev.c > prev.o) {
+            if (curr.o > prev.c && curr.c < prev.o && currBody > prevBody) {
+                isEngulfing = true;
+                isBullish = false;
+            }
+        }
+        
+        if (isEngulfing) {
+            const hasVolume = (curr.v || 0) > avgVol * 1.3;
+            const confirms = isBullish ? (next.c > curr.c) : (next.c < curr.c);
+            
+            return {
+                swept: true,
+                confirmed: confirms && hasVolume,
+                sweepCandle: curr,
+                confirmCandle: next,
+                hasRejection: true,
+                hasVolume,
+                volumeRatio: avgVol > 0 ? ((curr.v || 0) / avgVol).toFixed(1) : '0',
+                engulfingStrength: (currBody / prevBody).toFixed(1)
+            };
+        }
+    }
+    return { swept: false, confirmed: false, hasVolume: false };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 4: ADVANCED VOLUME ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ADVANCED VOLUME ANALYSIS AT POOL
+ */
+function checkVolumeAtPool(candles, poolPrice, isSSL) {
+    if (!candles || candles.length < 30) {
+        return { hasVolume: false, volumeRatio: '0', analysis: null };
+    }
+    
+    const avgVol = candles.slice(-30, -10).reduce((s, c) => s + (c.v || 0), 0) / 20;
+    const last10 = candles.slice(-10);
+    
+    let volumeAtPool = 0;
+    let candlesAtPool = 0;
+    let buyVolumeAtPool = 0;
+    let sellVolumeAtPool = 0;
+    
+    for (const c of last10) {
+        const touchedPool = isSSL 
+            ? (c.h >= poolPrice * 0.995)
+            : (c.l <= poolPrice * 1.005);
+        
+        if (touchedPool) {
+            volumeAtPool += (c.v || 0);
+            candlesAtPool++;
+            
+            if (c.c > c.o) buyVolumeAtPool += (c.v || 0);
+            else sellVolumeAtPool += (c.v || 0);
+        }
+    }
+    
+    const avgVolumeAtPool = candlesAtPool > 0 ? volumeAtPool / candlesAtPool : 0;
+    const volumeRatio = avgVol > 0 ? avgVolumeAtPool / avgVol : 0;
+    
+    // Delta analysis
+    const delta = buyVolumeAtPool - sellVolumeAtPool;
+    const deltaRatio = volumeAtPool > 0 ? delta / volumeAtPool : 0;
+    
+    let verdict = 'NEUTRAL';
+    if (volumeRatio > 2) verdict = 'STRONG';
+    else if (volumeRatio > 1.5) verdict = 'ELEVATED';
+    else if (volumeRatio < 0.7) verdict = 'WEAK';
+    
+    return {
+        hasVolume: volumeRatio > 1.3,
+        volumeRatio: volumeRatio.toFixed(1),
+        avgVolumeAtPool,
+        candlesAtPool,
+        buyVolume: buyVolumeAtPool,
+        sellVolume: sellVolumeAtPool,
+        delta,
+        deltaRatio: (deltaRatio * 100).toFixed(0),
+        verdict,
+        analysis: {
+            isAccumulation: !isSSL && deltaRatio > 0.3,
+            isDistribution: isSSL && deltaRatio < -0.3,
+            isNeutral: Math.abs(deltaRatio) <= 0.3
+        }
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 5: LIQUIDITY FLOW ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ANALYZE LIQUIDITY FLOW
+ * Determines if liquidity is building or depleting
+ */
+function analyzeLiquidityFlow(candles, pool, isSSL) {
+    if (!candles || candles.length < 30) {
+        return { flow: 'UNKNOWN', building: false, depleting: false };
+    }
+    
+    const last20 = candles.slice(-20);
+    const poolZone = { low: pool.lowPrice, high: pool.highPrice };
+    
+    let approaches = 0;
+    let rejections = 0;
+    let breakAttempts = 0;
+    let volumeAtPool = 0;
+    
+    for (const c of last20) {
+        const touchesPool = isSSL 
+            ? (c.h >= poolZone.low && c.h <= poolZone.high * 1.005)
+            : (c.l <= poolZone.high && c.l >= poolZone.low * 0.995);
+        
+        if (touchesPool) {
+            approaches++;
+            volumeAtPool += (c.v || 0);
+            
+            const bodyTop = Math.max(c.o, c.c);
+            const bodyBottom = Math.min(c.o, c.c);
+            
+            if (isSSL && bodyTop < pool.price) rejections++;
+            if (!isSSL && bodyBottom > pool.price) rejections++;
+            
+            if (isSSL && c.c > pool.price) breakAttempts++;
+            if (!isSSL && c.c < pool.price) breakAttempts++;
+        }
+    }
+    
+    let flow = 'NEUTRAL';
+    let building = false;
+    let depleting = false;
+    
+    if (approaches >= 3 && rejections >= 2) {
+        flow = 'BUILDING';
+        building = true;
+    } else if (breakAttempts >= 2 && rejections < 2) {
+        flow = 'DEPLETING';
+        depleting = true;
+    } else if (approaches >= 2) {
+        flow = 'TESTING';
+    }
+    
+    return {
+        flow,
+        building,
+        depleting,
+        approaches,
+        rejections,
+        breakAttempts,
+        volumeAtPool,
+        conviction: building ? 'HIGH' : (depleting ? 'LOW' : 'MEDIUM')
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 6: INSTITUTIONAL FOOTPRINT DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * DETECT INSTITUTIONAL FOOTPRINT AT POOL
+ */
+function detectInstitutionalFootprint(candles, pool, isSSL) {
+    if (!candles || candles.length < 30) {
+        return { detected: false, confidence: 0, signs: [] };
+    }
+    
+    const signs = [];
+    let confidence = 0;
+    
+    const last30 = candles.slice(-30);
+    const avgVolume = last30.reduce((s, c) => s + (c.v || 0), 0) / 30;
+    const avgRange = last30.reduce((s, c) => s + (c.h - c.l), 0) / 30;
+    
+    // 1. Volume spike at pool
+    for (let i = 0; i < last30.length; i++) {
+        const c = last30[i];
+        const atPool = isSSL 
+            ? (c.h >= pool.price * 0.998)
+            : (c.l <= pool.price * 1.002);
+        
+        if (atPool && (c.v || 0) > avgVolume * 2) {
+            signs.push('Volume spike at pool (2x+)');
+            confidence += 25;
+            break;
+        }
+    }
+    
+    // 2. Large wick rejection
+    for (let i = 0; i < last30.length; i++) {
+        const c = last30[i];
+        
+        if (isSSL) {
+            const topWick = c.h - Math.max(c.o, c.c);
+            if (topWick > avgRange * 1.5 && c.h >= pool.price * 0.998) {
+                signs.push('Large rejection wick (1.5x ATR)');
+                confidence += 20;
+                break;
+            }
+        } else {
+            const bottomWick = Math.min(c.o, c.c) - c.l;
+            if (bottomWick > avgRange * 1.5 && c.l <= pool.price * 1.002) {
+                signs.push('Large rejection wick (1.5x ATR)');
+                confidence += 20;
+                break;
+            }
+        }
+    }
+    
+    // 3. Absorption pattern
+    let smallCandles = 0;
+    for (let i = 0; i < Math.min(10, last30.length); i++) {
+        const c = last30[last30.length - 1 - i];
+        if ((c.h - c.l) < avgRange * 0.5) {
+            smallCandles++;
+        }
+    }
+    if (smallCandles >= 5) {
+        signs.push('Absorption pattern (consolidation)');
+        confidence += 15;
+    }
+    
+    // 4. Delta divergence
+    const last5 = last30.slice(-5);
+    let buyVolume = 0, sellVolume = 0;
+    for (const c of last5) {
+        if (c.c > c.o) buyVolume += (c.v || 0);
+        else sellVolume += (c.v || 0);
+    }
+    
+    const priceTrend = last5[last5.length - 1].c > last5[0].c ? 'UP' : 'DOWN';
+    const volumeTrend = buyVolume > sellVolume ? 'BUY' : 'SELL';
+    
+    if ((priceTrend === 'DOWN' && volumeTrend === 'BUY') || 
+        (priceTrend === 'UP' && volumeTrend === 'SELL')) {
+        signs.push('Delta divergence (accumulation/distribution)');
+        confidence += 20;
+    }
+    
+    // 5. Strong defense
+    if (pool.touches >= 4) {
+        signs.push(`Strong defense (${pool.touches} touches)`);
+        confidence += 15;
+    }
+    
+    return {
+        detected: confidence >= 40,
+        confidence: Math.min(100, confidence),
+        signs,
+        verdict: confidence >= 60 ? 'STRONG' : (confidence >= 40 ? 'MODERATE' : 'WEAK')
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 7: RECLAIM DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * DETECT POOL RECLAIM after sweep
+ */
+function detectPoolReclaim(candles, pool, sweep, isSSL) {
+    if (!sweep || !sweep.swept) {
+        return { reclaimed: false, reclaimStrength: 0 };
+    }
+    
+    const sweepIdx = candles.findIndex(c => c === sweep.sweepCandle);
+    if (sweepIdx === -1 || sweepIdx >= candles.length - 2) {
+        return { reclaimed: false, reclaimStrength: 0 };
+    }
+    
+    const afterSweep = candles.slice(sweepIdx + 1);
+    let reclaimed = false;
+    let reclaimStrength = 0;
+    let reclaimCandle = null;
+    
+    for (let i = 0; i < afterSweep.length; i++) {
+        const c = afterSweep[i];
+        
+        if (isSSL) {
+            if (c.c < pool.price && c.h < pool.price * 1.002) {
+                reclaimed = true;
+                reclaimStrength += 10;
+                if (!reclaimCandle) reclaimCandle = c;
+            }
+        } else {
+            if (c.c > pool.price && c.l > pool.price * 0.998) {
+                reclaimed = true;
+                reclaimStrength += 10;
+                if (!reclaimCandle) reclaimCandle = c;
+            }
+        }
+    }
+    
+    return {
+        reclaimed,
+        reclaimStrength: Math.min(100, reclaimStrength),
+        reclaimCandle,
+        candlesHolding: reclaimed ? afterSweep.length : 0
+    };
+}
+
+console.log('👑 ULTRA RED V2 - ADVANCED LIQUIDITY ENGINE LOADED');
+console.log('📊 7 Sections: Regime, Pools (3-algo), Sweeps (3-type), Volume, Flow, Institutional, Reclaim');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FIND MULTI-TF TARGETS (Opposite Liquidity)
+// ═══════════════════════════════════════════════════════════════════════════════
+function findMultiTfTargets(allTfPools, direction, entryPrice) {
+    const targets = [];
+    const tfNames = { '15': '15m', '30': '30m', '60': '1H', '240': '4H' };
+    
+    for (const tf in allTfPools) {
+        const pools = direction === 'LONG' ? allTfPools[tf].ssl : allTfPools[tf].bsl;
+        if (!pools) continue;
+        
+        pools.forEach(pool => {
+            const valid = direction === 'LONG' ? pool.price > entryPrice : pool.price < entryPrice;
+            if (valid) {
+                targets.push({
+                    price: pool.price,
+                    tf: tfNames[tf] || tf,
+                    touches: pool.touches,
+                    type: pool.type
+                });
+            }
+        });
+    }
+    
+    // Sort by distance (nearest first)
+    targets.sort((a, b) => {
+        const distA = Math.abs(a.price - entryPrice);
+        const distB = Math.abs(b.price - entryPrice);
+        return distA - distB;
+    });
+    
+    return targets.slice(0, 3);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALCULATE ATR (Average True Range)
+// ═══════════════════════════════════════════════════════════════════════════════
+function calculateATR(candles, period = 14) {
+    if (!candles || candles.length < period + 1) return 0;
+    
+    let trSum = 0;
+    for (let i = candles.length - period; i < candles.length; i++) {
+        const c = candles[i];
+        const prev = candles[i - 1];
+        const tr = Math.max(
+            c.h - c.l,
+            Math.abs(c.h - prev.c),
+            Math.abs(c.l - prev.c)
+        );
+        trSum += tr;
+    }
+    return trSum / period;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADAPTIVE LIMIT ZONE - 3 LEVELS
+// ═══════════════════════════════════════════════════════════════════════════════
+function calculateAdaptiveLimits(direction, pool, candles, stackedTfs) {
+    const atr = calculateATR(candles);
+    const price = pool.price;
+    const atrPct = price > 0 ? atr / price : 0.02;
+    
+    // Pool width factor
+    const poolWidth = Math.abs(pool.highPrice - pool.lowPrice) / price;
+    
+    // Base adjustments
+    let aggressiveAdj = 0;
+    let optimalAdj = 0;
+    let safeAdj = 0;
+    
+    if (direction === 'LONG') {
+        // LONG: Lower prices are more aggressive (deeper into pool)
+        
+        // Volatility adjustment
+        if (atrPct > 0.04) {
+            aggressiveAdj = -0.006;  // High vol: go much deeper
+            optimalAdj = -0.004;
+        } else if (atrPct > 0.02) {
+            aggressiveAdj = -0.004;
+            optimalAdj = -0.002;
+        } else {
+            aggressiveAdj = -0.003;
+            optimalAdj = -0.001;
+        }
+        
+        // Pool strength adjustment
+        if (pool.touches >= 4) {
+            // Strong pool: can be tighter
+            aggressiveAdj += 0.001;
+            optimalAdj += 0.0005;
+        } else if (pool.touches <= 2) {
+            // Weak pool: go deeper
+            aggressiveAdj -= 0.002;
+            optimalAdj -= 0.001;
+        }
+        
+        // Stacked TF adjustment
+        if (stackedTfs >= 3) {
+            optimalAdj += 0.001;  // Strong confluence: can be tighter
+        }
+        
+        // Pool width adjustment
+        if (poolWidth > 0.008) {
+            aggressiveAdj -= 0.002;  // Wide pool: go inside
+        }
+        
+        // Safe is always at pool level
+        safeAdj = 0.001;  // Slightly above pool for safe fill
+        
+    } else {
+        // SHORT: Higher prices are more aggressive (deeper into pool)
+        
+        // Volatility adjustment
+        if (atrPct > 0.04) {
+            aggressiveAdj = 0.006;
+            optimalAdj = 0.004;
+        } else if (atrPct > 0.02) {
+            aggressiveAdj = 0.004;
+            optimalAdj = 0.002;
+        } else {
+            aggressiveAdj = 0.003;
+            optimalAdj = 0.001;
+        }
+        
+        // Pool strength adjustment
+        if (pool.touches >= 4) {
+            aggressiveAdj -= 0.001;
+            optimalAdj -= 0.0005;
+        } else if (pool.touches <= 2) {
+            aggressiveAdj += 0.002;
+            optimalAdj += 0.001;
+        }
+        
+        // Stacked TF adjustment
+        if (stackedTfs >= 3) {
+            optimalAdj -= 0.001;
+        }
+        
+        // Pool width adjustment
+        if (poolWidth > 0.008) {
+            aggressiveAdj += 0.002;
+        }
+        
+        safeAdj = -0.001;  // Slightly below pool for safe fill
+    }
+    
+    return {
+        aggressive: price * (1 + aggressiveAdj),
+        optimal: price * (1 + optimalAdj),
+        safe: price * (1 + safeAdj),
+        poolPrice: price,
+        atrPct: (atrPct * 100).toFixed(2),
+        recommended: pool.touches >= 3 && stackedTfs >= 2 ? 'optimal' : 'safe'
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALCULATE LEVELS - WITH ADAPTIVE ZONES
+// ═══════════════════════════════════════════════════════════════════════════════
+function calculateLevels(direction, pool, targets, confirmCandle, candles, stackedTfs) {
+    let entry, sl;
+    
+    // Get adaptive limit zones
+    const limitZone = calculateAdaptiveLimits(direction, pool, candles, stackedTfs || 1);
+    
+    if (direction === 'LONG') {
+        // Entry: Above pool (or above confirm candle if available)
+        entry = confirmCandle ? confirmCandle.h * 1.001 : limitZone.optimal;
+        // SL: Below pool structure
+        sl = pool.lowPrice * 0.997;
+    } else {
+        // Entry: Below pool (or below confirm candle if available)
+        entry = confirmCandle ? confirmCandle.l * 0.999 : limitZone.optimal;
+        // SL: Above pool structure
+        sl = pool.highPrice * 1.003;
+    }
+    
+    const risk = Math.abs(limitZone.optimal - sl) || 0.0001; // Prevent division by zero
+    
+    // Calculate RR for each limit level
+    const calcRR = (entryPrice) => {
+        const r = Math.abs(entryPrice - sl);
+        if (targets.length > 0) {
+            return (Math.abs(targets[0].price - entryPrice) / r).toFixed(1);
+        }
+        return '2.5';
+    };
+    
+    // TPs from multi-TF targets
+    const tps = targets.map((t, i) => ({
+        price: t.price,
+        tf: t.tf,
+        rr: (Math.abs(t.price - limitZone.optimal) / risk).toFixed(1)
+    }));
+    
+    // If no targets found, use RR-based
+    if (tps.length === 0) {
+        if (direction === 'LONG') {
+            tps.push({ price: limitZone.optimal + risk * 2, tf: 'RR', rr: '2.0' });
+            tps.push({ price: limitZone.optimal + risk * 3, tf: 'RR', rr: '3.0' });
+        } else {
+            tps.push({ price: limitZone.optimal - risk * 2, tf: 'RR', rr: '2.0' });
+            tps.push({ price: limitZone.optimal - risk * 3, tf: 'RR', rr: '3.0' });
+        }
+    }
+    
+    return { 
+        entry, 
+        sl, 
+        tps,
+        limitZone: {
+            aggressive: limitZone.aggressive,
+            optimal: limitZone.optimal,
+            safe: limitZone.safe,
+            aggressiveRR: calcRR(limitZone.aggressive),
+            optimalRR: calcRR(limitZone.optimal),
+            safeRR: calcRR(limitZone.safe),
+            recommended: limitZone.recommended,
+            atrPct: limitZone.atrPct
+        }
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHECK ZONE CONFLUENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+function findZoneConf(candles, poolPrice) {
+    if (!candles || candles.length < 50) return { has: false };
+    
+    let touches = 0;
+    const range = poolPrice * 0.01; // 1% zone
+    
+    for (let i = 10; i < candles.length - 10; i++) {
+        const c = candles[i];
+        // Check if price reacted in this zone
+        if (Math.abs(c.l - poolPrice) < range || Math.abs(c.h - poolPrice) < range) {
+            // Check if it was a reversal
+            const before = candles[i - 3];
+            const after = candles[i + 3];
+            if ((before.c > c.l && after.c > c.l) || (before.c < c.h && after.c < c.h)) {
+                touches++;
+            }
+        }
+    }
+    
+    return { has: touches >= 2, touches };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHECK HTF ALIGNMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+function checkHTF(tfData, direction) {
+    const h1 = tfData['60'];
+    const h4 = tfData['240'];
+    
+    let h1Bias = 'NEUTRAL', h4Bias = 'NEUTRAL';
+    
+    if (h1 && h1.length > 20) {
+        const ma = h1.slice(-20).reduce((s, c) => s + c.c, 0) / 20;
+        const price = h1[h1.length - 1].c;
+        h1Bias = price > ma * 1.005 ? 'BULL' : price < ma * 0.995 ? 'BEAR' : 'NEUTRAL';
+    }
+    
+    if (h4 && h4.length > 20) {
+        const ma = h4.slice(-20).reduce((s, c) => s + c.c, 0) / 20;
+        const price = h4[h4.length - 1].c;
+        h4Bias = price > ma * 1.005 ? 'BULL' : price < ma * 0.995 ? 'BEAR' : 'NEUTRAL';
+    }
+    
+    const opposing = (direction === 'LONG' && (h1Bias === 'BEAR' || h4Bias === 'BEAR')) ||
+                     (direction === 'SHORT' && (h1Bias === 'BULL' || h4Bias === 'BULL'));
+    
+    const aligned = (direction === 'LONG' && h4Bias === 'BULL') ||
+                    (direction === 'SHORT' && h4Bias === 'BEAR');
+    
+    return { h1Bias, h4Bias, opposing, aligned };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALCULATE SCORE (WITH TOGGLE SUPPORT)
+// ═══════════════════════════════════════════════════════════════════════════════
+function calculateScore(params) {
+    const s = STATE.settings;
+    let score = 40; // Base
+    
+    // Pool strength (0-20) - always on
+    score += Math.min(params.touches * 5, 15);
+    
+    // Pool algorithm count bonus (multi-algo = stronger pool)
+    if (params.pool?.algorithmCount >= 2) score += 5;
+    if (params.pool?.algorithmCount >= 3) score += 5;
+    
+    // Zone confluence (0-15) - toggle
+    if (s.useZone && params.zoneConf) score += 15;
+    
+    // Stacked TFs (0-15) - toggle
+    if (s.useStacked) score += Math.min(params.stackedTfs * 5, 15);
+    
+    // Sweep confirmed (0-20) - toggle
+    if (s.useSweep) {
+        if (params.sweepConfirmed) score += 20;
+        else if (params.swept) score += 10;
+    }
+    
+    // Sweep type bonus (ENGULFING strongest, BODY medium, WICK basic)
+    if (params.sweepType === 'ENGULFING') score += 5;
+    else if (params.sweepType === 'BODY') score += 3;
+    
+    // Volume spike (0-10) - toggle
+    if (s.useVolume && params.hasVolume) score += 10;
+    
+    // HTF aligned (0-15) - toggle
+    if (s.useHTF) {
+        if (params.htfAligned) score += 15;
+        else if (params.htfOpposing) score -= 15;
+    }
+    
+    // Regime adjustment - toggle
+    if (s.useRegime && params.regime) {
+        if (params.regime.regime === 'TREND') score += 5;
+        else if (params.regime.regime === 'CHOP') score -= 10;
+    }
+    
+    // V2 ADVANCED BONUSES
+    // Liquidity Flow bonus
+    if (params.liquidityFlow) {
+        if (params.liquidityFlow.building) score += 10;
+        else if (params.liquidityFlow.flow === 'TESTING') score += 5;
+    }
+    
+    // Institutional Footprint bonus
+    if (params.institutional?.detected) {
+        score += Math.min(10, Math.round(params.institutional.confidence / 10));
+    }
+    
+    // Reclaim bonus
+    if (params.reclaim?.reclaimed) score += 5;
+    
+    // Learning adjustment - toggle
+    if (s.useLearning && params.learningAdj) {
+        score += params.learningAdj;
+    }
+    
+    return Math.min(100, Math.max(0, score));
+}
+
+function getGrade(score) {
+    const G = CONFIG.grades;
+    if (score >= G.PERFECT) return { name: 'PERFECT', class: 'perfect' };
+    if (score >= G.STRONG) return { name: 'STRONG', class: 'strong' };
+    if (score >= G.VALID) return { name: 'VALID', class: 'valid' };
+    if (score >= G.HEATING) return { name: 'HEATING', class: 'heating' };
+    return { name: 'WEAK', class: 'weak' };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANALYZE COIN
+// ═══════════════════════════════════════════════════════════════════════════════
+function analyzeCoin(symbol, tfData) {
+    const results = [];
+    const entry15 = tfData['15'] || tfData['30'];
+    if (!entry15 || entry15.length < 50) return results;
+    
+    const currentPrice = entry15[entry15.length - 1].c;
+    const s = STATE.settings;
+    
+    // Detect regime (if enabled)
+    const regime = s.useRegime ? detectRegime(entry15) : null;
+    
+    // Skip if choppy market and regime filter is ON
+    if (s.useRegime && regime?.regime === 'CHOP' && regime?.score > 70) {
+        return results; // Too choppy, skip this coin
+    }
+    
+    // Collect pools from all TFs
+    const allTfPools = {};
+    for (const tf in tfData) {
+        allTfPools[tf] = {
+            bsl: findPools(tfData[tf], false),
+            ssl: findPools(tfData[tf], true)
+        };
+    }
+    
+    // Analyze BSL pools (for LONG setups)
+    const entryTfBsl = allTfPools['15']?.bsl || allTfPools['30']?.bsl || [];
+    for (const pool of entryTfBsl) {
+        if (pool.touches < s.minTouches) continue;
+        
+        const distance = (currentPrice - pool.price) / currentPrice;
+        if (distance < 0 || distance > s.maxDistance) continue;
+        
+        const sweep = detectSweep(entry15, pool, false);
+        const volumeAtPool = checkVolumeAtPool(entry15, pool.price, false);
+        const targets = findMultiTfTargets(allTfPools, 'LONG', pool.price);
+        const zoneConf = findZoneConf(entry15, pool.price);
+        const htf = checkHTF(tfData, 'LONG');
+        
+        // V2 ADVANCED: Additional analysis
+        const liquidityFlow = analyzeLiquidityFlow(entry15, pool, false);
+        const institutional = detectInstitutionalFootprint(entry15, pool, false);
+        const reclaim = sweep.swept ? detectPoolReclaim(entry15, pool, sweep, false) : null;
+        
+        // Count stacked TFs
+        let stackedTfs = 0;
+        for (const tf in allTfPools) {
+            if (allTfPools[tf].bsl.some(p => Math.abs(p.price - pool.price) / pool.price < 0.015)) {
+                stackedTfs++;
+            }
+        }
+        
+        // Volume check: either from sweep OR from pool proximity
+        const hasVolume = sweep.hasVolume || volumeAtPool.hasVolume;
+        
+        // Get learning adjustment
+        const learningAdj = getLearningAdjustment({ symbol, direction: 'LONG', score: 50, regime });
+        
+        const score = calculateScore({
+            touches: pool.touches,
+            pool: pool,
+            zoneConf: zoneConf.has,
+            stackedTfs,
+            swept: sweep.swept,
+            sweepConfirmed: sweep.confirmed,
+            sweepType: sweep.sweepType,
+            hasVolume: hasVolume,
+            htfAligned: htf.aligned,
+            htfOpposing: htf.opposing,
+            regime,
+            learningAdj,
+            // V2 ADVANCED
+            liquidityFlow,
+            institutional,
+            reclaim
+        });
+        
+        if (score < s.minScore) continue;
+        
+        const levels = calculateLevels('LONG', pool, targets, sweep.confirmed ? sweep.confirmCandle : null, entry15, stackedTfs);
+        const grade = getGrade(score);
+        
+        // CORE RULE: Liq+Vol=VALID, Liq only=CAUTION, Vol only=HIDE
+        const hasLiquidity = pool.touches >= s.minTouches;
+        
+        // Determine mode based on CORE RULE
+        let mode = 'watch';
+        if (!hasLiquidity) {
+            continue; // Not enough liquidity = HIDE
+        } else if (sweep.confirmed && hasVolume) {
+            mode = 'confirmed'; // Sweep confirmed with volume = CONFIRMED
+        } else if (sweep.swept && hasVolume) {
+            mode = 'limit'; // Swept with volume but not fully confirmed = LIMIT
+        } else if (hasLiquidity && hasVolume && !sweep.swept) {
+            mode = 'limit'; // Pool exists + volume building + no sweep yet = LIMIT (approaching)
+        } else if (hasLiquidity && !hasVolume) {
+            mode = 'caution'; // Pool exists but no volume = CAUTION
+        }
+        // else stays 'watch'
+        
+        // Get historical win rate for this symbol/direction
+        const histWinRate = getHistoricalWinRate(symbol, 'LONG');
+        
+        results.push({
+            symbol,
+            direction: 'LONG',
+            mode,
+            pool,
+            currentPrice,
+            distance,
+            distancePct: pct(distance),
+            sweep,
+            volumeAtPool,
+            levels,
+            targets,
+            zoneConf,
+            htf,
+            stackedTfs,
+            score,
+            grade: grade.name,
+            gradeClass: grade.class,
+            hasLiquidity,
+            hasVolume,
+            regime,
+            histWinRate,
+            // V2 ADVANCED DATA
+            liquidityFlow,
+            institutional,
+            reclaim
+        });
+    }
+    
+    // Analyze SSL pools (for SHORT setups)
+    const entryTfSsl = allTfPools['15']?.ssl || allTfPools['30']?.ssl || [];
+    for (const pool of entryTfSsl) {
+        if (pool.touches < s.minTouches) continue;
+        
+        const distance = (pool.price - currentPrice) / currentPrice;
+        if (distance < 0 || distance > s.maxDistance) continue;
+        
+        const sweep = detectSweep(entry15, pool, true);
+        const volumeAtPool = checkVolumeAtPool(entry15, pool.price, true);
+        const targets = findMultiTfTargets(allTfPools, 'SHORT', pool.price);
+        const zoneConf = findZoneConf(entry15, pool.price);
+        const htf = checkHTF(tfData, 'SHORT');
+        
+        // V2 ADVANCED: Additional analysis
+        const liquidityFlow = analyzeLiquidityFlow(entry15, pool, true);
+        const institutional = detectInstitutionalFootprint(entry15, pool, true);
+        const reclaim = sweep.swept ? detectPoolReclaim(entry15, pool, sweep, true) : null;
+        
+        // Count stacked TFs
+        let stackedTfs = 0;
+        for (const tf in allTfPools) {
+            if (allTfPools[tf].ssl.some(p => Math.abs(p.price - pool.price) / pool.price < 0.015)) {
+                stackedTfs++;
+            }
+        }
+        
+        // Volume check: either from sweep OR from pool proximity
+        const hasVolume = sweep.hasVolume || volumeAtPool.hasVolume;
+        
+        // Get learning adjustment
+        const learningAdj = getLearningAdjustment({ symbol, direction: 'SHORT', score: 50, regime });
+        
+        const score = calculateScore({
+            touches: pool.touches,
+            pool: pool,
+            zoneConf: zoneConf.has,
+            stackedTfs,
+            swept: sweep.swept,
+            sweepConfirmed: sweep.confirmed,
+            sweepType: sweep.sweepType,
+            hasVolume: hasVolume,
+            htfAligned: htf.aligned,
+            htfOpposing: htf.opposing,
+            regime,
+            learningAdj,
+            // V2 ADVANCED
+            liquidityFlow,
+            institutional,
+            reclaim
+        });
+        
+        if (score < s.minScore) continue;
+        
+        const levels = calculateLevels('SHORT', pool, targets, sweep.confirmed ? sweep.confirmCandle : null, entry15, stackedTfs);
+        const grade = getGrade(score);
+        
+        // CORE RULE: Liq+Vol=VALID, Liq only=CAUTION, Vol only=HIDE
+        const hasLiquidity = pool.touches >= s.minTouches;
+        
+        // Determine mode based on CORE RULE
+        let mode = 'watch';
+        if (!hasLiquidity) {
+            continue; // Not enough liquidity = HIDE
+        } else if (sweep.confirmed && hasVolume) {
+            mode = 'confirmed'; // Sweep confirmed with volume = CONFIRMED
+        } else if (sweep.swept && hasVolume) {
+            mode = 'limit'; // Swept with volume but not fully confirmed = LIMIT
+        } else if (hasLiquidity && hasVolume && !sweep.swept) {
+            mode = 'limit'; // Pool exists + volume building + no sweep yet = LIMIT (approaching)
+        } else if (hasLiquidity && !hasVolume) {
+            mode = 'caution'; // Pool exists but no volume = CAUTION
+        }
+        // else stays 'watch'
+        
+        // Get historical win rate for this symbol/direction
+        const histWinRate = getHistoricalWinRate(symbol, 'SHORT');
+        
+        results.push({
+            symbol,
+            direction: 'SHORT',
+            mode,
+            pool,
+            currentPrice,
+            distance,
+            distancePct: pct(distance),
+            sweep,
+            volumeAtPool,
+            levels,
+            targets,
+            zoneConf,
+            htf,
+            stackedTfs,
+            score,
+            grade: grade.name,
+            gradeClass: grade.class,
+            hasLiquidity,
+            hasVolume,
+            regime,
+            histWinRate,
+            // V2 ADVANCED DATA
+            liquidityFlow,
+            institutional,
+            reclaim
+        });
+    }
+    
+    return results;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCANNER
+// ═══════════════════════════════════════════════════════════════════════════════
+async function runScan() {
+    if (STATE.scanning) return;
+    STATE.scanning = true;
+    
+    const btn = document.getElementById('scanBtn');
+    btn.classList.add('scanning');
+    btn.textContent = '⏳ SCANNING...';
+    btn.disabled = true;
+    
+    const start = Date.now();
+    
+    try {
+        status('Fetching market data...', true);
+        
+        const data = await fetchMulti(CONFIG.coins, (done, total) => {
+            status(`Fetching ${done}/${total} coins...`, true);
+        });
+        
+        status('Analyzing pools and sweeps...', true);
+        
+        // Reset signals
+        STATE.signals = {
+            limit: { long: [], short: [] },
+            confirmed: { long: [], short: [] },
+            caution: { long: [], short: [] },
+            watch: { long: [], short: [] }
+        };
+        
+        // Analyze each coin
+        for (const sym in data) {
+            const signals = analyzeCoin(sym, data[sym]);
+            for (const sig of signals) {
+                const dir = sig.direction.toLowerCase();
+                STATE.signals[sig.mode][dir].push(sig);
+            }
+        }
+        
+        // Sort by score
+        for (const mode in STATE.signals) {
+            STATE.signals[mode].long.sort((a, b) => b.score - a.score);
+            STATE.signals[mode].short.sort((a, b) => b.score - a.score);
+            STATE.signals[mode].long = STATE.signals[mode].long.slice(0, 15);
+            STATE.signals[mode].short = STATE.signals[mode].short.slice(0, 15);
+        }
+        
+        // Send Telegram alerts for new signals
+        const allNew = [...STATE.signals.limit.long, ...STATE.signals.limit.short,
+                        ...STATE.signals.confirmed.long, ...STATE.signals.confirmed.short];
+        for (const sig of allNew.slice(0, 5)) { // Top 5 only to avoid spam
+            await sendTelegramAlert(sig);
+            await sleep(500); // Rate limit
+        }
+        
+        // Update counts
+        updateCounts();
+        renderCurrentList();
+        
+        const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+        const total = STATE.signals.limit.long.length + STATE.signals.limit.short.length +
+                      STATE.signals.confirmed.long.length + STATE.signals.confirmed.short.length +
+                      STATE.signals.caution.long.length + STATE.signals.caution.short.length;
+        
+        status(`Found ${total} setups in ${elapsed}s`, false);
+        toast(`✅ Scan complete: ${total} setups found`);
+        
+    } catch(e) {
+        status('Error: ' + e.message, false);
+        toast('❌ ' + e.message);
+        console.error(e);
+    } finally {
+        STATE.scanning = false;
+        btn.classList.remove('scanning');
+        btn.textContent = '🔍 SCAN ' + CONFIG.coins.length + ' COINS';
+        btn.disabled = false;
+    }
+}
+
+function updateCounts() {
+    const s = STATE.signals;
+    
+    const limitTotal = s.limit.long.length + s.limit.short.length;
+    const confirmedTotal = s.confirmed.long.length + s.confirmed.short.length;
+    const cautionTotal = s.caution.long.length + s.caution.short.length;
+    const watchTotal = s.watch.long.length + s.watch.short.length;
+    
+    // Update main tab counts
+    document.getElementById('limitCnt').textContent = limitTotal;
+    document.getElementById('confirmedCnt').textContent = confirmedTotal;
+    document.getElementById('cautionCnt').textContent = cautionTotal;
+    document.getElementById('watchCnt').textContent = watchTotal;
+    
+    // Update sub tab counts based on current main tab
+    const mode = STATE.mainTab;
+    document.getElementById('longCnt').textContent = s[mode].long.length;
+    document.getElementById('shortCnt').textContent = s[mode].short.length;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDER CARDS
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderLimitCard(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction.toLowerCase();
+    const atLevel = sig.distance < CONFIG.limits.atLevelDist;
+    const lz = sig.levels?.limitZone;
+    const rec = lz?.recommended || 'optimal';
+    const regimeClass = sig.regime?.regime?.toLowerCase() || '';
+    
+    // Determine volume source
+    const volFromSweep = sig.sweep?.hasVolume;
+    const volFromPool = sig.volumeAtPool?.hasVolume;
+    const volRatio = volFromSweep ? sig.sweep?.volumeRatio : sig.volumeAtPool?.volumeRatio;
+    
+    // Determine status badge
+    let statusBadge = '📍 LIMIT';
+    let statusClass = 'limit';
+    if (atLevel) {
+        statusBadge = '⚡ AT LEVEL';
+        statusClass = 'at-level';
+    } else if (sig.sweep?.swept) {
+        statusBadge = '💥 SWEPT';
+        statusClass = 'limit';
+    }
+    
+    return `
+    <div class="signal-card limit ${dir} grade-${sig.gradeClass}" onclick="openChart('${sig.symbol}')">
+        <div class="card-top">
+            <div class="card-pair">
+                <span class="coin-name">${coin}</span>
+                <span class="dir-badge ${dir}">${sig.direction}</span>
+                <span class="status-badge ${statusClass}">${statusBadge}</span>
+                ${sig.regime ? `<span class="regime-badge ${regimeClass}">${sig.regime.regime}</span>` : ''}
+            </div>
+            <span class="grade-badge ${sig.gradeClass}">${sig.grade} ${sig.score}</span>
+        </div>
+        
+        ${sig.histWinRate ? `<div class="hist-badge">📊 ${sig.histWinRate.winRate}% win (${sig.histWinRate.trades} trades)</div>` : ''}
+        
+        <div class="pool-info">
+            <div class="pool-row">
+                <span class="pool-label">Current Price</span>
+                <span class="pool-value price">$${fmt(sig.currentPrice)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">${sig.pool?.type} Pool</span>
+                <span class="pool-value price">$${fmt(sig.pool?.price)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Distance</span>
+                <span class="pool-value distance">${sig.distancePct} away</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Touches / ATR</span>
+                <span class="pool-value touches">${sig.pool?.touches}x / ${lz?.atrPct || '--'}%</span>
+            </div>
+        </div>
+        
+        <div class="levels-box" style="border:1px solid ${dir === 'long' ? 'rgba(0,217,160,0.3)' : 'rgba(255,45,45,0.3)'}">
+            <div class="levels-title" style="color:${dir === 'long' ? '#00d9a0' : '#ff2d2d'}">📍 ADAPTIVE LIMIT ZONE</div>
+            <div class="level-row" style="${rec === 'aggressive' ? `background:${dir === 'long' ? 'rgba(0,217,160,0.1)' : 'rgba(255,45,45,0.1)'};border-radius:4px;padding:6px;margin:-2px` : ''}">
+                <span class="level-label">🎯 Aggressive</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.aggressive || sig.pool?.price)}</span>
+                <span class="level-rr ${parseFloat(lz?.aggressiveRR) >= 2.5 ? 'great' : parseFloat(lz?.aggressiveRR) >= 1.5 ? 'good' : 'poor'}">${lz?.aggressiveRR || '--'}R</span>
+            </div>
+            <div class="level-row" style="${rec === 'optimal' ? `background:${dir === 'long' ? 'rgba(0,217,160,0.1)' : 'rgba(255,45,45,0.1)'};border-radius:4px;padding:6px;margin:-2px` : ''}">
+                <span class="level-label">⚡ Optimal ${rec === 'optimal' ? '✓' : ''}</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.optimal || sig.pool?.price)}</span>
+                <span class="level-rr ${parseFloat(lz?.optimalRR) >= 2.5 ? 'great' : parseFloat(lz?.optimalRR) >= 1.5 ? 'good' : 'poor'}">${lz?.optimalRR || '--'}R</span>
+            </div>
+            <div class="level-row" style="${rec === 'safe' ? `background:${dir === 'long' ? 'rgba(0,217,160,0.1)' : 'rgba(255,45,45,0.1)'};border-radius:4px;padding:6px;margin:-2px` : ''}">
+                <span class="level-label">🛡️ Safe ${rec === 'safe' ? '✓' : ''}</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.safe || sig.pool?.price)}</span>
+                <span class="level-rr ${parseFloat(lz?.safeRR) >= 2.5 ? 'great' : parseFloat(lz?.safeRR) >= 1.5 ? 'good' : 'poor'}">${lz?.safeRR || '--'}R</span>
+            </div>
+            <div class="level-row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:8px">
+                <span class="level-label">🛑 Stop Loss</span>
+                <span class="level-value sl">$${fmt(sig.levels?.sl)}</span>
+            </div>
+        </div>
+        
+        <div class="targets-box ${dir}">
+            <div class="targets-title ${dir}">🎯 Multi-TF Targets</div>
+            ${sig.targets?.length > 0 ? sig.targets?.map((t, i) => {
+                const rr = parseFloat(sig.levels?.tps?.[i]?.rr) || 0;
+                const rrClass = rr >= 2.5 ? 'great' : rr >= 1.5 ? 'good' : 'poor';
+                return `
+                <div class="target-row">
+                    <div>
+                        <span class="target-label">TP${i + 1}</span>
+                        <span class="target-tf ${dir}">${t.tf}</span>
+                    </div>
+                    <span class="target-price ${dir}">$${fmt(t.price)}</span>
+                    <span class="target-rr ${rrClass}">${sig.levels?.tps?.[i]?.rr || '--'}R</span>
+                </div>`;
+            }).join('') : '<div class="target-row"><span class="target-label">No targets found</span></div>'}
+        </div>
+        
+        <div class="confluence-row">
+            ${sig.hasVolume ? (() => {
+                const vr = parseFloat(volRatio) || 0;
+                const volClass = vr >= 2 ? `vol-strong-${dir}` : vr >= 1.5 ? 'vol-good' : 'vol-weak';
+                return `<span class="conf-tag ${volClass}">🔥 Vol ${volRatio}x</span>`;
+            })() : ''}
+            ${sig.sweep?.swept ? `<span class="conf-tag swept-${dir}">💥 Swept</span>` : ''}
+            ${sig.zoneConf?.has ? `<span class="conf-tag zone-${dir}">📊 Zone</span>` : ''}
+            ${sig.stackedTfs >= 2 ? `<span class="conf-tag stacked-${dir}">📚 ${sig.stackedTfs}TF</span>` : ''}
+            ${sig.htf?.aligned ? `<span class="conf-tag htf-${dir}">📈 HTF</span>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderConfirmedCard(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction.toLowerCase();
+    const lz = sig.levels?.limitZone;
+    
+    // Volume info
+    const volFromSweep = sig.sweep?.hasVolume;
+    const volFromPool = sig.volumeAtPool?.hasVolume;
+    const volRatio = volFromSweep ? sig.sweep?.volumeRatio : sig.volumeAtPool?.volumeRatio;
+    
+    return `
+    <div class="signal-card confirmed ${dir} grade-${sig.gradeClass}" onclick="openChart('${sig.symbol}')">
+        <div class="card-top">
+            <div class="card-pair">
+                <span class="coin-name">${coin}</span>
+                <span class="dir-badge ${dir}">${sig.direction}</span>
+                <span class="status-badge confirmed">✅ CONFIRMED</span>
+            </div>
+            <span class="grade-badge ${sig.gradeClass}">${sig.grade} ${sig.score}</span>
+        </div>
+        
+        <div class="confirm-details">
+            <div class="confirm-title">🔥 Sweep Confirmed</div>
+            <div class="confirm-row">
+                <span class="confirm-label">Current Price</span>
+                <span class="confirm-value pass">$${fmt(sig.currentPrice)}</span>
+            </div>
+            <div class="confirm-row">
+                <span class="confirm-label">Pool Swept</span>
+                <span class="confirm-value pass">✅ $${fmt(sig.pool?.price)}</span>
+            </div>
+            <div class="confirm-row">
+                <span class="confirm-label">Rejection Wick</span>
+                <span class="confirm-value ${sig.sweep?.hasRejection ? 'pass' : 'fail'}">${sig.sweep?.hasRejection ? '✅ Yes' : '❌ No'}</span>
+            </div>
+            <div class="confirm-row">
+                <span class="confirm-label">Volume Spike</span>
+                <span class="confirm-value ${sig.hasVolume ? 'pass' : 'fail'}">${sig.hasVolume ? `✅ ${volRatio}x` : '❌'}</span>
+            </div>
+            <div class="confirm-row">
+                <span class="confirm-label">Confirmation Candle</span>
+                <span class="confirm-value ${sig.sweep?.confirmed ? 'pass' : 'fail'}">${sig.sweep?.confirmed ? '✅ Yes' : '⏳ Pending'}</span>
+            </div>
+        </div>
+        
+        <div class="levels-box" style="border:1px solid ${dir === 'long' ? 'rgba(0,217,160,0.3)' : 'rgba(255,45,45,0.3)'}">
+            <div class="levels-title" style="color:${dir === 'long' ? '#00d9a0' : '#ff2d2d'}">🎯 Entry Levels</div>
+            <div class="level-row">
+                <span class="level-label">Entry (Confirm)</span>
+                <span class="level-value entry-${dir}">$${fmt(sig.levels?.entry)}</span>
+            </div>
+            <div class="level-row">
+                <span class="level-label">Entry (Limit)</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.optimal || sig.pool?.price)}</span>
+            </div>
+            <div class="level-row">
+                <span class="level-label">Stop Loss</span>
+                <span class="level-value sl">$${fmt(sig.levels?.sl)}</span>
+            </div>
+        </div>
+        
+        <div class="targets-box ${dir}">
+            <div class="targets-title ${dir}">🎯 Multi-TF Targets</div>
+            ${sig.levels?.tps?.length > 0 ? sig.levels.tps.map((t, i) => {
+                const rr = parseFloat(t.rr) || 0;
+                const rrClass = rr >= 2.5 ? 'great' : rr >= 1.5 ? 'good' : 'poor';
+                return `
+                <div class="target-row">
+                    <div>
+                        <span class="target-label">TP${i + 1}</span>
+                        <span class="target-tf ${dir}">${t.tf}</span>
+                    </div>
+                    <span class="target-price ${dir}">$${fmt(t.price)}</span>
+                    <span class="target-rr ${rrClass}">${t.rr}R</span>
+                </div>`;
+            }).join('') : '<div class="target-row"><span class="target-label">No targets found</span></div>'}
+        </div>
+        
+        <div class="confluence-row">
+            ${(() => {
+                const vr = parseFloat(volRatio) || 0;
+                const volClass = vr >= 2 ? `vol-strong-${dir}` : vr >= 1.5 ? 'vol-good' : 'vol-weak';
+                return `<span class="conf-tag ${volClass}">🔥 Vol ${volRatio}x</span>`;
+            })()}
+            <span class="conf-tag swept-${dir}">💥 Swept</span>
+            ${sig.zoneConf?.has ? `<span class="conf-tag zone-${dir}">📊 Zone</span>` : ''}
+            ${sig.stackedTfs >= 2 ? `<span class="conf-tag stacked-${dir}">📚 ${sig.stackedTfs}TF</span>` : ''}
+            ${sig.htf?.aligned ? `<span class="conf-tag htf-${dir}">📈 HTF</span>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderWatchCard(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction.toLowerCase();
+    const regimeClass = sig.regime?.regime?.toLowerCase() || '';
+    
+    return `
+    <div class="signal-card watch ${dir}" onclick="openChart('${sig.symbol}')">
+        <div class="card-top">
+            <div class="card-pair">
+                <span class="coin-name">${coin}</span>
+                <span class="dir-badge ${dir}">${sig.direction}</span>
+                <span class="status-badge" style="background:var(--bg4);color:var(--text2)">👁 WATCH</span>
+                ${sig.regime ? `<span class="regime-badge ${regimeClass}">${sig.regime.regime}</span>` : ''}
+            </div>
+            <span class="grade-badge ${sig.gradeClass}">${sig.score}</span>
+        </div>
+        <div class="pool-info">
+            <div class="pool-row">
+                <span class="pool-label">Current</span>
+                <span class="pool-value price">$${fmt(sig.currentPrice)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">${sig.pool?.type} Pool</span>
+                <span class="pool-value price">$${fmt(sig.pool?.price)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Distance</span>
+                <span class="pool-value distance">${sig.distancePct}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Touches</span>
+                <span class="pool-value touches">${sig.pool?.touches}x</span>
+            </div>
+        </div>
+        <div class="confluence-row">
+            ${sig.zoneConf?.has ? `<span class="conf-tag zone-${dir}">📊 Zone</span>` : ''}
+            ${sig.stackedTfs >= 2 ? `<span class="conf-tag stacked-${dir}">📚 ${sig.stackedTfs}TF</span>` : ''}
+        </div>
+    </div>`;
+}
+
+function renderCautionCard(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction.toLowerCase();
+    const lz = sig.levels?.limitZone;
+    const regimeClass = sig.regime?.regime?.toLowerCase() || '';
+    
+    return `
+    <div class="signal-card caution ${dir}" onclick="openChart('${sig.symbol}')">
+        <div class="card-top">
+            <div class="card-pair">
+                <span class="coin-name">${coin}</span>
+                <span class="dir-badge ${dir}">${sig.direction}</span>
+                <span class="status-badge caution">⚠️ CAUTION</span>
+                ${sig.regime ? `<span class="regime-badge ${regimeClass}">${sig.regime.regime}</span>` : ''}
+            </div>
+            <span class="grade-badge ${sig.gradeClass}">${sig.grade} ${sig.score}</span>
+        </div>
+        
+        <div class="caution-warning">
+            <div class="icon">⚠️</div>
+            <div class="text">LIQUIDITY ONLY - NO VOLUME</div>
+            <div class="sub">Pool exists but no volume spike detected. Wait for volume confirmation.</div>
+        </div>
+        
+        <div class="pool-info">
+            <div class="pool-row">
+                <span class="pool-label">Current Price</span>
+                <span class="pool-value price">$${fmt(sig.currentPrice)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">${sig.pool?.type} Pool</span>
+                <span class="pool-value price">$${fmt(sig.pool?.price)}</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Distance</span>
+                <span class="pool-value distance">${sig.distancePct} away</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Touches</span>
+                <span class="pool-value touches">${sig.pool?.touches}x</span>
+            </div>
+            <div class="pool-row">
+                <span class="pool-label">Volume Status</span>
+                <span class="pool-value" style="color:var(--short)">❌ No spike (${sig.volumeAtPool?.volumeRatio || '0.0'}x avg)</span>
+            </div>
+        </div>
+        
+        <div class="levels-box" style="border:1px solid ${dir === 'long' ? 'rgba(0,217,160,0.3)' : 'rgba(255,45,45,0.3)'}">
+            <div class="levels-title" style="color:${dir === 'long' ? '#00d9a0' : '#ff2d2d'}">🎯 Entry Levels (if volume confirms)</div>
+            <div class="level-row">
+                <span class="level-label">⚡ Optimal Entry</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.optimal || sig.pool?.price)}</span>
+            </div>
+            <div class="level-row">
+                <span class="level-label">🛡️ Safe Entry</span>
+                <span class="level-value entry-${dir}">$${fmt(lz?.safe || sig.pool?.price)}</span>
+            </div>
+            <div class="level-row">
+                <span class="level-label">🛑 Stop Loss</span>
+                <span class="level-value sl">$${fmt(sig.levels?.sl)}</span>
+            </div>
+        </div>
+        
+        <div class="targets-box ${dir}">
+            <div class="targets-title ${dir}">🎯 Targets (if confirmed)</div>
+            ${sig.targets?.length > 0 ? sig.targets?.slice(0, 2).map((t, i) => `
+                <div class="target-row">
+                    <div><span class="target-label">TP${i + 1}</span><span class="target-tf ${dir}">${t.tf}</span></div>
+                    <span class="target-price ${dir}">$${fmt(t.price)}</span>
+                </div>
+            `).join('') : '<div class="target-row"><span class="target-label">No targets found</span></div>'}
+        </div>
+        
+        <div class="confluence-row">
+            <span class="conf-tag vol-weak">❌ No Vol</span>
+            ${sig.zoneConf?.has ? `<span class="conf-tag zone-${dir}">📊 Zone</span>` : ''}
+            ${sig.stackedTfs >= 2 ? `<span class="conf-tag stacked-${dir}">📚 ${sig.stackedTfs}TF</span>` : ''}
+            ${sig.htf?.aligned ? `<span class="conf-tag htf-${dir}">📈 HTF</span>` : ''}
+        </div>
+    </div>`;
+}
+
+function openChart(symbol) {
+    window.open(`https://www.tradingview.com/chart/?symbol=BYBIT:${symbol}.P`, '_blank');
+}
+
+function startScan() {
+    runScan();
+}
+
+// Auto-scan on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    setTimeout(runScan, 500);
+});
+
+// Close modal on outside click
+document.getElementById('settingsModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        closeSettings();
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COIN MANAGEMENT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Load coins from localStorage or use defaults
+function loadCoins() {
+    try {
+        const saved = localStorage.getItem('scanner_coins');
+        if (saved) {
+            CONFIG.coins = JSON.parse(saved);
+        } else {
+            CONFIG.coins = [...CONFIG.defaultCoins];
+        }
+        updateCoinCount();
+    } catch(e) {
+        CONFIG.coins = [...CONFIG.defaultCoins];
+    }
+}
+
+// Save coins to localStorage
+function saveCoins() {
+    try {
+        localStorage.setItem('scanner_coins', JSON.stringify(CONFIG.coins));
+        updateCoinCount();
+    } catch(e) { console.log('Save coins error:', e); }
+}
+
+// Update coin count display
+function updateCoinCount() {
+    const el = document.getElementById('coinCount');
+    if (el) el.textContent = CONFIG.coins.length;
+}
+
+// Add a coin
+function addCoin() {
+    const input = document.getElementById('inputAddCoin');
+    let coin = input.value.trim().toUpperCase();
+    
+    if (!coin) {
+        toast('❌ Enter a coin symbol');
+        return;
+    }
+    
+    // Add USDT if not present
+    if (!coin.endsWith('USDT')) {
+        coin = coin + 'USDT';
+    }
+    
+    // Check if already exists
+    if (CONFIG.coins.includes(coin)) {
+        toast(`⚠️ ${coin} already in list`);
+        return;
+    }
+    
+    CONFIG.coins.push(coin);
+    saveCoins();
+    input.value = '';
+    toast(`✅ Added ${coin}`);
+}
+
+// Remove a coin
+function removeCoin() {
+    const input = document.getElementById('inputRemoveCoin');
+    let coin = input.value.trim().toUpperCase();
+    
+    if (!coin) {
+        toast('❌ Enter a coin symbol');
+        return;
+    }
+    
+    // Add USDT if not present
+    if (!coin.endsWith('USDT')) {
+        coin = coin + 'USDT';
+    }
+    
+    const idx = CONFIG.coins.indexOf(coin);
+    if (idx === -1) {
+        toast(`⚠️ ${coin} not found`);
+        return;
+    }
+    
+    CONFIG.coins.splice(idx, 1);
+    saveCoins();
+    input.value = '';
+    toast(`🗑️ Removed ${coin}`);
+}
+
+// Show/hide coin list
+function showCoinList() {
+    const display = document.getElementById('coinListDisplay');
+    if (display.style.display === 'none') {
+        display.innerHTML = CONFIG.coins.map(c => 
+            `<span class="coin-tag" onclick="quickRemoveCoin('${c}')">${c.replace('USDT','')}</span>`
+        ).join('');
+        display.style.display = 'block';
+    } else {
+        display.style.display = 'none';
+    }
+}
+
+// Quick remove coin by clicking tag
+function quickRemoveCoin(coin) {
+    if (confirm(`Remove ${coin}?`)) {
+        const idx = CONFIG.coins.indexOf(coin);
+        if (idx > -1) {
+            CONFIG.coins.splice(idx, 1);
+            saveCoins();
+            showCoinList(); // Refresh display
+            toast(`🗑️ Removed ${coin}`);
+        }
+    }
+}
+
+// Reset to default coins
+function resetCoins() {
+    if (confirm('Reset to default 350 coins?')) {
+        CONFIG.coins = [...CONFIG.defaultCoins];
+        saveCoins();
+        document.getElementById('coinListDisplay').style.display = 'none';
+        toast('🔄 Reset to default coins');
+    }
+}
+
+// Load coins on startup
+setTimeout(loadCoins, 50);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADVANCED TELEGRAM ALERT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Load Telegram settings from localStorage
+function loadTelegramSettings() {
+    try {
+        const saved = localStorage.getItem('telegram_settings');
+        if (saved) {
+            const s = JSON.parse(saved);
+            TELEGRAM.enabled = s.enabled || false;
+            TELEGRAM.token = s.token || '';
+            TELEGRAM.chatId = s.chatId || '';
+            TELEGRAM.minGrade = s.minGrade || 'STRONG';
+            TELEGRAM.cooldown = s.cooldown || 5;
+            TELEGRAM.detailed = s.detailed !== false;
+            TELEGRAM.cream = s.cream !== false;
+            TELEGRAM.tpAlerts = s.tpAlerts !== false;
+            TELEGRAM.slAlerts = s.slAlerts !== false;
+            TELEGRAM.dailySummary = s.dailySummary || false;
+            TELEGRAM.quietStart = s.quietStart || null;
+            TELEGRAM.quietEnd = s.quietEnd || null;
+        }
+        // Update UI
+        document.getElementById('toggleTelegram').checked = TELEGRAM.enabled;
+        document.getElementById('inputBotToken').value = TELEGRAM.token;
+        document.getElementById('inputChatId').value = TELEGRAM.chatId;
+        document.getElementById('selectMinGrade').value = TELEGRAM.minGrade;
+        document.getElementById('inputCooldown').value = TELEGRAM.cooldown;
+        document.getElementById('toggleDetailed').checked = TELEGRAM.detailed;
+        document.getElementById('toggleCream').checked = TELEGRAM.cream;
+        document.getElementById('toggleTPAlerts').checked = TELEGRAM.tpAlerts;
+        document.getElementById('toggleSLAlerts').checked = TELEGRAM.slAlerts;
+        document.getElementById('toggleDailySummary').checked = TELEGRAM.dailySummary;
+        document.getElementById('inputQuietStart').value = TELEGRAM.quietStart || '';
+        document.getElementById('inputQuietEnd').value = TELEGRAM.quietEnd || '';
+    } catch(e) { console.log('Telegram settings load error:', e); }
+}
+
+// Save Telegram setting
+function saveTelegramSetting(key, value) {
+    TELEGRAM[key] = value;
+    try {
+        localStorage.setItem('telegram_settings', JSON.stringify({
+            enabled: TELEGRAM.enabled,
+            token: TELEGRAM.token,
+            chatId: TELEGRAM.chatId,
+            minGrade: TELEGRAM.minGrade,
+            cooldown: TELEGRAM.cooldown,
+            detailed: TELEGRAM.detailed,
+            cream: TELEGRAM.cream,
+            tpAlerts: TELEGRAM.tpAlerts,
+            slAlerts: TELEGRAM.slAlerts,
+            dailySummary: TELEGRAM.dailySummary,
+            quietStart: TELEGRAM.quietStart,
+            quietEnd: TELEGRAM.quietEnd
+        }));
+        toast(`✅ Telegram: ${key} saved`);
+    } catch(e) { console.log('Telegram settings save error:', e); }
+}
+
+// Update Telegram stats display
+function updateTelegramStats() {
+    document.getElementById('tgSent').textContent = TELEGRAM.stats.sent;
+    document.getElementById('tgSkipped').textContent = TELEGRAM.stats.skipped;
+    document.getElementById('tgErrors').textContent = TELEGRAM.stats.errors;
+}
+
+// Test Telegram connection
+async function testTelegram() {
+    if (!TELEGRAM.token || !TELEGRAM.chatId) {
+        toast('❌ Enter Bot Token and Chat ID first');
+        return;
+    }
+    
+    try {
+        const msg = `🔔 *Test Alert*\n\n✅ Scanner connected successfully!\n\n🚗 _Tesla Juniper Ultra Red Edition_`;
+        const url = `https://api.telegram.org/bot${TELEGRAM.token}/sendMessage`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.chatId,
+                text: msg,
+                parse_mode: 'Markdown'
+            })
+        });
+        const data = await response.json();
+        if (data.ok) {
+            toast('✅ Telegram test successful!');
+        } else {
+            toast('❌ Telegram error: ' + (data.description || 'Unknown'));
+            TELEGRAM.stats.errors++;
+            updateTelegramStats();
+        }
+    } catch(e) {
+        toast('❌ Connection failed: ' + e.message);
+        TELEGRAM.stats.errors++;
+        updateTelegramStats();
+    }
+}
+
+// Check if signal meets minimum grade
+function meetsMinGrade(grade) {
+    const gradeOrder = ['HEATING', 'VALID', 'STRONG', 'PERFECT'];
+    const signalIndex = gradeOrder.indexOf(grade);
+    const minIndex = gradeOrder.indexOf(TELEGRAM.minGrade);
+    return signalIndex >= minIndex;
+}
+
+// Check quiet hours
+function isQuietHours() {
+    if (!TELEGRAM.quietStart || !TELEGRAM.quietEnd) return false;
+    const hour = new Date().getHours();
+    const start = parseInt(TELEGRAM.quietStart);
+    const end = parseInt(TELEGRAM.quietEnd);
+    if (start < end) return hour >= start && hour < end;
+    return hour >= start || hour < end;
+}
+
+// Check cooldown for symbol
+function checkCooldown(symbol, direction) {
+    const key = `${symbol}_${direction}`;
+    const lastSent = TELEGRAM.cooldowns.get(key);
+    const cooldownMs = TELEGRAM.cooldown * 60 * 1000;
+    if (lastSent && Date.now() - lastSent < cooldownMs) {
+        return false;
+    }
+    return true;
+}
+
+// Set cooldown after sending
+function setCooldown(symbol, direction) {
+    const key = `${symbol}_${direction}`;
+    TELEGRAM.cooldowns.set(key, Date.now());
+    // Clean old entries
+    const cutoff = Date.now() - TELEGRAM.cooldown * 60 * 1000 * 2;
+    for (const [k, v] of TELEGRAM.cooldowns) {
+        if (v < cutoff) TELEGRAM.cooldowns.delete(k);
+    }
+}
+
+// Format price for Telegram
+function fmtTg(price, symbol) {
+    if (!price || isNaN(price)) return 'N/A';
+    if (symbol?.includes('BTC')) return price >= 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: 0}) : price.toFixed(2);
+    if (price >= 10000) return price.toLocaleString('en-US', {maximumFractionDigits: 0});
+    if (price >= 1000) return price.toFixed(1);
+    if (price >= 1) return price.toFixed(4);
+    if (price >= 0.01) return price.toFixed(6);
+    return price.toFixed(8);
+}
+
+// Build CREAM/PERFECT VIP alert
+function buildCreamAlert(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction;
+    const lz = sig.levels?.limitZone;
+    
+    return `💎💎💎 *CREAM SIGNAL* 💎💎💎
+
+🏆 *${coin}/USDT* - *${dir}*
+
+✨ *ALL CONDITIONS PERFECT:*
+• Score: ${sig.score}/100 ✅
+• Zone: ${sig.zoneConf?.has ? '✅' : '❌'}
+• Volume: ${sig.hasVolume ? '✅' : '❌'}
+• HTF: ${sig.htf?.aligned ? '✅' : '❌'}
+
+💰 *TRADE SETUP:*
+▶️ Entry: $${fmtTg(lz?.optimal || sig.pool?.price, sig.symbol)}
+🛑 SL: $${fmtTg(sig.levels?.sl, sig.symbol)}
+🎯 TP1: $${fmtTg(sig.targets?.[0]?.price, sig.symbol)}
+🎯 TP2: $${fmtTg(sig.targets?.[1]?.price, sig.symbol)}
+🎯 TP3: $${fmtTg(sig.targets?.[2]?.price, sig.symbol)}
+
+⚡ *ACTION:* High confidence setup!
+
+🚗 _Tesla Juniper Ultra Red_`;
+}
+
+// Build detailed alert
+function buildDetailedAlert(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction;
+    const dirEmoji = dir === 'LONG' ? '🟢' : '🔴';
+    const gradeEmoji = sig.grade === 'PERFECT' ? '👑' : sig.grade === 'STRONG' ? '💪' : '✅';
+    const lz = sig.levels?.limitZone;
+    
+    let msg = `${dirEmoji} *${sig.grade} SIGNAL* ${gradeEmoji}
+
+📊 *${coin}/USDT* - ${dir}
+📈 Score: ${sig.score}/100
+📍 Pool: ${sig.pool?.type} @ $${fmtTg(sig.pool?.price, sig.symbol)}
+📏 Distance: ${sig.distancePct}
+
+*Confluence:*`;
+    
+    if (sig.hasVolume) msg += `\n🔥 Volume: ${sig.volumeAtPool?.volumeRatio || sig.sweep?.volumeRatio}x`;
+    if (sig.zoneConf?.has) msg += `\n📊 Zone Confirmed`;
+    if (sig.stackedTfs >= 2) msg += `\n📚 Stacked: ${sig.stackedTfs}TF`;
+    if (sig.htf?.aligned) msg += `\n📈 HTF Aligned`;
+    if (sig.sweep?.swept) msg += `\n💥 Swept`;
+
+    msg += `
+
+*Trade Levels:*
+▶️ Entry: $${fmtTg(lz?.optimal || sig.pool?.price, sig.symbol)}
+🛑 SL: $${fmtTg(sig.levels?.sl, sig.symbol)}`;
+
+    if (sig.targets?.length > 0) {
+        sig.targets.slice(0, 3).forEach((t, i) => {
+            msg += `\n🎯 TP${i+1}: $${fmtTg(t.price, sig.symbol)} (${t.tf})`;
+        });
+    }
+
+    msg += `\n\n🚗 _Tesla Juniper Ultra Red_`;
+    return msg;
+}
+
+// Build simple alert
+function buildSimpleAlert(sig) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dir = sig.direction;
+    const dirEmoji = dir === 'LONG' ? '🟢' : '🔴';
+    const lz = sig.levels?.limitZone;
+    
+    return `${dirEmoji} *${sig.grade}* - ${coin} ${dir}
+
+📍 Entry: $${fmtTg(lz?.optimal || sig.pool?.price, sig.symbol)}
+🛑 SL: $${fmtTg(sig.levels?.sl, sig.symbol)}
+🎯 TP1: $${fmtTg(sig.targets?.[0]?.price, sig.symbol)}
+
+Score: ${sig.score} | ${sig.distancePct}`;
+}
+
+// Build TP hit alert
+function buildTPHitAlert(sig, tpNum, hitPrice, profitPct) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dirEmoji = sig.direction === 'LONG' ? '🟢' : '🔴';
+    const tpEmoji = tpNum === 1 ? '🎯' : tpNum === 2 ? '🎯🎯' : '🏆';
+    
+    return `${tpEmoji} *TP${tpNum} HIT!* ${tpEmoji}
+
+${dirEmoji} *${coin}* ${sig.direction}
+💰 Price: $${fmtTg(hitPrice, sig.symbol)}
+📈 Profit: *+${profitPct.toFixed(2)}%*
+
+${tpNum === 1 ? '➡️ Move SL to breakeven!' : tpNum === 2 ? '➡️ Trail stop!' : '🎉 Full target!'}`;
+}
+
+// Build SL hit alert
+function buildSLHitAlert(sig, hitPrice, lossPct) {
+    const coin = sig.symbol.replace('USDT', '');
+    const dirEmoji = sig.direction === 'LONG' ? '🟢' : '🔴';
+    
+    return `🛑 *STOP LOSS HIT* 🛑
+
+${dirEmoji} *${coin}* ${sig.direction}
+💰 SL: $${fmtTg(hitPrice, sig.symbol)}
+📉 Loss: *${lossPct.toFixed(2)}%*
+
+💡 Review and move on.`;
+}
+
+// Build daily summary
+function buildDailySummary() {
+    const all = [...STATE.signals.limit.long, ...STATE.signals.limit.short,
+                 ...STATE.signals.confirmed.long, ...STATE.signals.confirmed.short];
+    
+    const perfect = all.filter(s => s.grade === 'PERFECT').length;
+    const strong = all.filter(s => s.grade === 'STRONG').length;
+    const longs = all.filter(s => s.direction === 'LONG').length;
+    const shorts = all.filter(s => s.direction === 'SHORT').length;
+    
+    return `📊 *DAILY SUMMARY*
+
+🔢 Total: ${all.length}
+👑 Perfect: ${perfect}
+💪 Strong: ${strong}
+
+🟢 Longs: ${longs}
+🔴 Shorts: ${shorts}
+
+📱 Sent: ${TELEGRAM.stats.sent}
+⏭️ Skipped: ${TELEGRAM.stats.skipped}
+
+🚗 _Tesla Juniper Ultra Red_`;
+}
+
+// Main send function
+async function sendTelegramAlert(sig) {
+    // Check if enabled
+    if (!TELEGRAM.enabled) {
+        TELEGRAM.stats.skipped++;
+        updateTelegramStats();
+        return;
+    }
+    
+    if (!TELEGRAM.token || !TELEGRAM.chatId) {
+        TELEGRAM.stats.skipped++;
+        updateTelegramStats();
+        return;
+    }
+    
+    // Check quiet hours
+    if (isQuietHours()) {
+        console.log('📱 Quiet hours active');
+        TELEGRAM.stats.skipped++;
+        updateTelegramStats();
+        return;
+    }
+    
+    // Check minimum grade
+    if (!meetsMinGrade(sig.grade)) {
+        console.log(`📱 Grade ${sig.grade} below minimum ${TELEGRAM.minGrade}`);
+        TELEGRAM.stats.skipped++;
+        updateTelegramStats();
+        return;
+    }
+    
+    // Check cooldown
+    if (!checkCooldown(sig.symbol, sig.direction)) {
+        console.log(`📱 Cooldown active for ${sig.symbol}`);
+        TELEGRAM.stats.skipped++;
+        updateTelegramStats();
+        return;
+    }
+    
+    // Build message
+    let message;
+    if (TELEGRAM.cream && (sig.grade === 'PERFECT' || sig.score >= 90)) {
+        message = buildCreamAlert(sig);
+    } else if (TELEGRAM.detailed) {
+        message = buildDetailedAlert(sig);
+    } else {
+        message = buildSimpleAlert(sig);
+    }
+    
+    // Send
+    try {
+        const url = `https://api.telegram.org/bot${TELEGRAM.token}/sendMessage`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.chatId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        const data = await response.json();
+        
+        if (data.ok) {
+            console.log(`📱 Telegram sent: ${sig.symbol} ${sig.direction}`);
+            setCooldown(sig.symbol, sig.direction);
+            TELEGRAM.stats.sent++;
+        } else {
+            console.log('📱 Telegram error:', data.description);
+            TELEGRAM.stats.errors++;
+        }
+        updateTelegramStats();
+    } catch(e) {
+        console.log('📱 Telegram failed:', e.message);
+        TELEGRAM.stats.errors++;
+        updateTelegramStats();
+    }
+}
+
+// Send TP hit alert
+async function sendTPAlert(sig, tpNum, hitPrice, profitPct) {
+    if (!TELEGRAM.enabled || !TELEGRAM.tpAlerts) return;
+    if (!TELEGRAM.token || !TELEGRAM.chatId) return;
+    
+    const message = buildTPHitAlert(sig, tpNum, hitPrice, profitPct);
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM.token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM.chatId, text: message, parse_mode: 'Markdown' })
+        });
+    } catch(e) { console.log('TP alert failed:', e); }
+}
+
+// Send SL hit alert
+async function sendSLAlert(sig, hitPrice, lossPct) {
+    if (!TELEGRAM.enabled || !TELEGRAM.slAlerts) return;
+    if (!TELEGRAM.token || !TELEGRAM.chatId) return;
+    
+    const message = buildSLHitAlert(sig, hitPrice, lossPct);
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM.token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM.chatId, text: message, parse_mode: 'Markdown' })
+        });
+    } catch(e) { console.log('SL alert failed:', e); }
+}
+
+// Send daily summary
+async function sendDailySummaryAlert() {
+    if (!TELEGRAM.enabled || !TELEGRAM.dailySummary) return;
+    if (!TELEGRAM.token || !TELEGRAM.chatId) return;
+    
+    const message = buildDailySummary();
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM.token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: TELEGRAM.chatId, text: message, parse_mode: 'Markdown' })
+        });
+    } catch(e) { console.log('Daily summary failed:', e); }
+}
+
+// Load telegram settings on startup
+setTimeout(loadTelegramSettings, 100);
+</script>
+</body>
+</html>
